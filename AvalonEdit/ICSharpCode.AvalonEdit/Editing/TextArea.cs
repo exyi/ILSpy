@@ -891,7 +891,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 				caret.BringCaretToView();
 			}
 		}
-		
+
 		void ReplaceSelectionWithNewLine()
 		{
 			string newLine = TextUtilities.GetNewLineFromDocument(this.Document, this.Caret.Line);
