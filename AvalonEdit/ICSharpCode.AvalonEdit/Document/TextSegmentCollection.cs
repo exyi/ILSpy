@@ -168,7 +168,7 @@ namespace ICSharpCode.AvalonEdit.Document
 			
 			// enlarge segments that contain offset (excluding those that have offset as endpoint)
 			foreach (TextSegment segment in FindSegmentsContaining(offset)) {
-				if (segment.StartOffset < offset && offset < segment.EndOffset) {
+				if (segment.StartOffset <= offset && offset <= segment.EndOffset) {
 					segment.Length += length;
 				}
 			}
