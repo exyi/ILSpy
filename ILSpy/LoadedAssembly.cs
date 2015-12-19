@@ -22,6 +22,8 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using ICSharpCode.ILSpy.Options;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
+using System.Linq;
 
 namespace ICSharpCode.ILSpy
 {
@@ -141,15 +143,26 @@ namespace ICSharpCode.ILSpy
 		{
 			// search for pdb in same directory as dll
 			string pdbName = Path.Combine(Path.GetDirectoryName(fileName), Path.GetFileNameWithoutExtension(fileName) + ".pdb");
+
+            if (!File.Exists(pdbName)) {
+                pdbName = Path.Combine(Environment.GetEnvironmentVariable("LocalAppData"), "Temp/SymbolCache", Path.GetFileNameWithoutExtension(fileName) + ".pdb");
+                if (Directory.Exists(pdbName)) {
+                    pdbName = Directory.GetFiles(pdbName, "*" + Path.GetFileNameWithoutExtension(fileName) + ".pdb", SearchOption.AllDirectories)
+                        .First();
+                }
+            }
+
 			if (File.Exists(pdbName)) {
 				using (Stream s = File.OpenRead(pdbName)) {
 					module.ReadSymbols(new Mono.Cecil.Pdb.PdbReaderProvider().GetSymbolReader(module, s));
 				}
 				return;
 			}
-			
-			// TODO: use symbol cache, get symbols from microsoft
-		}
+
+            // TODO: use symbol cache, get symbols from microsoft
+
+
+        }
 		
 		[ThreadStatic]
 		static int assemblyLoadDisableCount;
@@ -174,8 +187,8 @@ namespace ICSharpCode.ILSpy
 				}
 			}
 		}
-		
-		sealed class MyAssemblyResolver : IAssemblyResolver
+
+        sealed class MyAssemblyResolver : IAssemblyResolver
 		{
 			readonly LoadedAssembly parent;
 			
