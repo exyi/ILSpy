@@ -533,8 +533,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms
 
                 if (!bitmap.All(b => b)) return null;
 
-                var lamda = body as LambdaExpression;
-                if (lamda == null) return null;
+                if (!(body is LambdaExpression || body is AnonymousMethodExpression)) return null;
 
                 var uu = variables.SelectMany(FindSameExpressions).Where(rr => !rr.Ancestors.Contains(ifElseStatement)).ToArray();
                 if (uu.Length > 1) return null;
@@ -546,7 +545,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms
                 ifElseStatement.Remove();
 
                 foreach (var v in uu) {
-                    v.ReplaceWith(lamda.Clone());
+                    v.ReplaceWith(body.Clone());
                 }
             }
 

@@ -113,7 +113,7 @@ namespace ICSharpCode.Decompiler.ILAst
 			for(int i = 0; i < body.Count - 1;) {
 				ILVariable locVar;
 				ILExpression expr;
-				if (body[i].Match(ILCode.Stloc, out locVar, out expr) && InlineOneIfPossible(block.Body, i, aggressive: false)) {
+				if (body[i].Match(ILCode.Stloc, out locVar, out expr) && InlineOneIfPossible(block.Body, i, aggressive: true)) {
 					modified = true;
 					i = Math.Max(0, i - 1); // Go back one step
 				} else {

@@ -319,7 +319,8 @@ namespace ICSharpCode.Decompiler
 		public CSharpFormattingOptions CSharpFormattingOptions {
 			get {
 				if (csharpFormattingOptions == null) {
-					csharpFormattingOptions = FormattingOptionsFactory.CreateAllman();
+					csharpFormattingOptions = FormattingOptionsFactory.CreateSharpDevelop();
+                    csharpFormattingOptions.AutoPropertyFormatting = PropertyFormatting.ForceOneLine;
 					csharpFormattingOptions.IndentSwitchBody = false;
 					csharpFormattingOptions.ArrayInitializerWrapping = Wrapping.WrapAlways;
 				}
