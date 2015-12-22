@@ -1035,7 +1035,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms
             Attributes = { new Repeat(new AnyNode()) },
             Body = new BlockStatement {
                 new VariableDeclarationStatement { Type = new AnyNode("type"), Variables = { new AnyNode() } },
-                new VariableDeclarationStatement { Type = new Backreference("type"), Variables = { new AnyNode() } },
+                //new VariableDeclarationStatement { Type = new Backreference("type"), Variables = { new AnyNode() } },
                 new VariableDeclarationStatement { Type = new Backreference("type"), Variables = { new AnyNode() } },
                 new AssignmentExpression {
                     Left = new NamedNode("var1", new IdentifierExpression(Pattern.AnyString)),
@@ -1051,21 +1051,16 @@ namespace ICSharpCode.Decompiler.Ast.Transforms
                     EmbeddedStatement = new BlockStatement {
                         new AssignmentExpression(new NamedNode("var2", new IdentifierExpression(Pattern.AnyString)), new IdentifierExpressionBackreference("var1")),
                         new AssignmentExpression {
-                            Left = new NamedNode("var3", new IdentifierExpression(Pattern.AnyString)),
-                            Operator = AssignmentOperatorType.Assign,
-                            Right = new AnyNode("delegateCombine").ToExpression().Invoke(
-                                new IdentifierExpressionBackreference("var2"),
-                                new IdentifierExpression("value")
-                            ).CastTo(new Backreference("type"))
-                        },
-                        new AssignmentExpression {
                             Left = new IdentifierExpressionBackreference("var1"),
                             Right = new TypePattern(typeof(System.Threading.Interlocked)).ToType().Invoke(
                                 "CompareExchange",
                                 new AstType[] { new Backreference("type") }, // type argument
 								new Expression[] { // arguments
 									new DirectionExpression { FieldDirection = FieldDirection.Ref, Expression = new Backreference("field") },
-                                    new IdentifierExpressionBackreference("var3"),
+                                    new AnyNode("delegateCombine").ToExpression().Invoke(
+                                        new IdentifierExpressionBackreference("var2"),
+                                        new IdentifierExpression("value")
+                                    ).CastTo(new Backreference("type")),
                                     new IdentifierExpressionBackreference("var2")
                                 }
                             )}
@@ -1106,6 +1101,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms
                 attr.AttributeTarget = "method";
                 ed.Attributes.Add(attr.Detach());
             }
+
             ed.ReturnType = ev.ReturnType.Detach();
             ed.Modifiers = ev.Modifiers;
             ed.Variables.Add(new VariableInitializer(ev.Name));
@@ -1118,6 +1114,15 @@ namespace ICSharpCode.Decompiler.Ast.Transforms
                     ed.AddAnnotation(field);
                     AstBuilder.ConvertAttributes(ed, field, "field");
                 }
+            }
+
+            // remove [CompilerGenerated] attribute
+            foreach (var attr in ed.Attributes.ToArray()) {
+                attr.Attributes.FirstOrDefault(a =>
+                    a.Arguments.Count == 0 &&
+                    a.Type.Annotation<TypeReference>().FullName == "System.Runtime.CompilerServices.CompilerGeneratedAttribute")
+                    ?.Remove();
+                if (attr.Attributes.Count == 0) attr.Remove();
             }
 
             ev.ReplaceWith(ed);
