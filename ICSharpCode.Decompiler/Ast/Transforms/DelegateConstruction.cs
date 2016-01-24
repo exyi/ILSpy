@@ -140,7 +140,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms
         {
             if (!context.Settings.AnonymousMethods)
                 return false; // anonymous method decompilation is disabled
-            if (target != null && !(target is IdentifierExpression || target is ThisReferenceExpression || target is NullReferenceExpression || IsSingetonDisplayClass(target)))
+            if (target != null && !(target is IdentifierExpression || target is ThisReferenceExpression || target is NullReferenceExpression || IsSingetonDisplayClass(target) || IsVariableOrDisplayClassProp(target)))
                 return false; // don't copy arbitrary expressions, deal with identifiers only
 
             // Anonymous methods are defined in the same assembly
