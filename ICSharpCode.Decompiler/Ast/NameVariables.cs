@@ -60,7 +60,7 @@ namespace ICSharpCode.Decompiler.Ast
         }
 
         static DateTime lastSave;
-        static void SaveNameDict()
+        public static void SaveNameDict()
         {
             File.WriteAllLines("varIndex.txt", VarNameDict.Select(s => s.Key + "\t" + s.Value));
             lastSave = DateTime.Now;
@@ -69,7 +69,7 @@ namespace ICSharpCode.Decompiler.Ast
         public static void SaveVarName(ILVariable var, MethodDefinition methodDef, string name)
         {
             VarNameDict[LookupKey(var, methodDef)] = name;
-            if (lastSave.AddMinutes(1) > DateTime.Now) SaveNameDict();
+            if (lastSave.AddMinutes(1) < DateTime.Now) SaveNameDict();
         }
 
         public static string TryGetVarName(ILVariable var, MethodDefinition methodDef)

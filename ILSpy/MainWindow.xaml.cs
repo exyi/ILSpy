@@ -38,6 +38,7 @@ using ICSharpCode.ILSpy.XmlDoc;
 using ICSharpCode.TreeView;
 using Microsoft.Win32;
 using Mono.Cecil;
+using ICSharpCode.Decompiler.Ast;
 
 namespace ICSharpCode.ILSpy
 {
@@ -827,6 +828,7 @@ namespace ICSharpCode.ILSpy
 			if (bottomPane.Visibility == Visibility.Visible)
 				sessionSettings.BottomPaneSplitterPosition = bottomPaneRow.Height.Value / (bottomPaneRow.Height.Value + textViewRow.Height.Value);
 			sessionSettings.Save();
+            NameVariables.SaveNameDict();
 		}
 
 		private string GetAutoLoadedAssemblyNode(SharpTreeNode node)
