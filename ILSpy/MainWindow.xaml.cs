@@ -701,6 +701,8 @@ namespace ICSharpCode.ILSpy
 		
 		Task decompilationTask;
 		bool ignoreDecompilationRequests;
+
+        public Task DecompilationTask => decompilationTask;
 		
 		void DecompileSelectedNodes(DecompilerTextViewState state = null, bool recordHistory = true)
 		{

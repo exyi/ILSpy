@@ -630,16 +630,7 @@ namespace ICSharpCode.ILSpy.TextView
         {
             object reference = referenceSegment.Reference;
             if (!jumpToSource) {
-                ClearLocalReferenceMarks();
-                if (references != null) {
-                    foreach (var r in references) {
-                        if (reference.Equals(r.Reference)) {
-                            var mark = textMarkerService.Create(r.StartOffset, r.Length);
-                            mark.BackgroundColor = r.IsLocalTarget ? Colors.LightSeaGreen : Colors.GreenYellow;
-                            localReferenceMarks.Add(mark);
-                        }
-                    }
-                }
+                HighlightReference(reference);
                 return;
             }
             if (definitionLookup != null) {
@@ -656,6 +647,20 @@ namespace ICSharpCode.ILSpy.TextView
                 }
             }
             MainWindow.Instance.JumpToReference(reference);
+        }
+
+        public void HighlightReference(object reference)
+        {
+            ClearLocalReferenceMarks();
+            if (references != null) {
+                foreach (var r in references) {
+                    if (reference.Equals(r.Reference)) {
+                        var mark = textMarkerService.Create(r.StartOffset, r.Length);
+                        mark.BackgroundColor = r.IsLocalTarget ? Colors.LightSeaGreen : Colors.GreenYellow;
+                        localReferenceMarks.Add(mark);
+                    }
+                }
+            }
         }
 
         void TextViewMouseDown(object sender, MouseButtonEventArgs e)

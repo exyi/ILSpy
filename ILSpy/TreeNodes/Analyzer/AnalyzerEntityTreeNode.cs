@@ -23,31 +23,50 @@ using Mono.Cecil;
 
 namespace ICSharpCode.ILSpy.TreeNodes.Analyzer
 {
-	/// <summary>
-	/// Base class for entity nodes.
-	/// </summary>
-	public abstract class AnalyzerEntityTreeNode : AnalyzerTreeNode, IMemberTreeNode
-	{
-		public abstract MemberReference Member { get; }
-		
-		public override void ActivateItem(System.Windows.RoutedEventArgs e)
-		{
-			e.Handled = true;
-			MainWindow.Instance.JumpToReference(this.Member);
-		}
-		
-		public override bool HandleAssemblyListChanged(ICollection<LoadedAssembly> removedAssemblies, ICollection<LoadedAssembly> addedAssemblies)
-		{
-			foreach (LoadedAssembly asm in removedAssemblies) {
-				if (this.Member.Module == asm.ModuleDefinition)
-					return false; // remove this node
-			}
-			this.Children.RemoveAll(
-				delegate(SharpTreeNode n) {
-					AnalyzerTreeNode an = n as AnalyzerTreeNode;
-					return an == null || !an.HandleAssemblyListChanged(removedAssemblies, addedAssemblies);
-				});
-			return true;
-		}
-	}
+    /// <summary>
+    /// Base class for entity nodes.
+    /// </summary>
+    public abstract class AnalyzerEntityTreeNode : AnalyzerTreeNode, IMemberTreeNode
+    {
+        public abstract MemberReference Member { get; }
+
+        public override void ActivateItem(System.Windows.RoutedEventArgs e)
+        {
+            e.Handled = true;
+            MainWindow.Instance.JumpToReference(this.Member);
+            var r = GetParentReference();
+            if (r != null)
+                MainWindow.Instance.DecompilationTask.Then(() => {
+                    MainWindow.Instance.TextView.HighlightReference(r);
+                });
+        }
+
+        protected MemberReference GetParentReference()
+        {
+            var p = Parent;
+            MemberReference result = null;
+            while (result == null && p != null)
+            {
+                result = (p as AnalyzerEntityTreeNode)?.Member;
+                p = p.Parent;
+            }
+            return result;
+        }
+
+        public override bool HandleAssemblyListChanged(ICollection<LoadedAssembly> removedAssemblies, ICollection<LoadedAssembly> addedAssemblies)
+        {
+            foreach (LoadedAssembly asm in removedAssemblies)
+            {
+                if (this.Member.Module == asm.ModuleDefinition)
+                    return false; // remove this node
+            }
+            this.Children.RemoveAll(
+                delegate (SharpTreeNode n)
+                {
+                    AnalyzerTreeNode an = n as AnalyzerTreeNode;
+                    return an == null || !an.HandleAssemblyListChanged(removedAssemblies, addedAssemblies);
+                });
+            return true;
+        }
+    }
 }
