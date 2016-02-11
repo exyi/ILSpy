@@ -45,7 +45,7 @@ namespace ICSharpCode.ILSpy.TreeNodes.Analyzer
         {
             var p = Parent;
             MemberReference result = null;
-            while (result == null && p != null)
+            while ((result == null || ((p as AnalyzerEntityTreeNode)?.Member is PropertyReference)) && p != null)
             {
                 result = (p as AnalyzerEntityTreeNode)?.Member;
                 p = p.Parent;
