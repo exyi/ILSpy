@@ -110,14 +110,16 @@ namespace ICSharpCode.ILSpy.TextView
 		/// <inheritdoc/>
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
-			if (e.ChangedButton == MouseButton.Left && !e.Handled) {
-				parent.JumpToReference(referenceSegment, (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) || e.ClickCount > 1));
-				if (!referenceSegment.IsLocal)
-					e.Handled = true;
-			} else if (e.ChangedButton == MouseButton.Right && e.ClickCount > 1 && !e.Handled) {
+			if ((e.ChangedButton == MouseButton.Right && e.ClickCount > 1 && !e.Handled)
+				|| (e.ChangedButton == MouseButton.Left && (Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt)))) {
 				// open analyze window on double right click
 				var r = referenceSegment.Reference as MemberReference;
 				if (r != null) AnalyzeContextMenuEntry.Analyze(r);
+			}
+			else if (e.ChangedButton == MouseButton.Left && !e.Handled) {
+				parent.JumpToReference(referenceSegment, (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) || e.ClickCount > 1));
+				if (!referenceSegment.IsLocal)
+					e.Handled = true;
 			}
 		}
 
