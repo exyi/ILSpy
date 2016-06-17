@@ -28,11 +28,12 @@ namespace ICSharpCode.Decompiler
 	public class DecompilerSettings : INotifyPropertyChanged
 	{
 		bool anonymousMethods = true;
-		
+
 		/// <summary>
 		/// Decompile anonymous methods/lambdas.
 		/// </summary>
-		public bool AnonymousMethods {
+		public bool AnonymousMethods
+		{
 			get { return anonymousMethods; }
 			set {
 				if (anonymousMethods != value) {
@@ -41,13 +42,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool expressionTrees = true;
-		
+
 		/// <summary>
 		/// Decompile expression trees.
 		/// </summary>
-		public bool ExpressionTrees {
+		public bool ExpressionTrees
+		{
 			get { return expressionTrees; }
 			set {
 				if (expressionTrees != value) {
@@ -56,13 +58,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool yieldReturn = true;
-		
+
 		/// <summary>
 		/// Decompile enumerators.
 		/// </summary>
-		public bool YieldReturn {
+		public bool YieldReturn
+		{
 			get { return yieldReturn; }
 			set {
 				if (yieldReturn != value) {
@@ -71,13 +74,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool asyncAwait = true;
-		
+
 		/// <summary>
 		/// Decompile async methods.
 		/// </summary>
-		public bool AsyncAwait {
+		public bool AsyncAwait
+		{
 			get { return asyncAwait; }
 			set {
 				if (asyncAwait != value) {
@@ -86,13 +90,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool automaticProperties = true;
-		
+
 		/// <summary>
 		/// Decompile automatic properties
 		/// </summary>
-		public bool AutomaticProperties {
+		public bool AutomaticProperties
+		{
 			get { return automaticProperties; }
 			set {
 				if (automaticProperties != value) {
@@ -101,13 +106,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool automaticEvents = true;
-		
+
 		/// <summary>
 		/// Decompile automatic events
 		/// </summary>
-		public bool AutomaticEvents {
+		public bool AutomaticEvents
+		{
 			get { return automaticEvents; }
 			set {
 				if (automaticEvents != value) {
@@ -116,13 +122,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool usingStatement = true;
-		
+
 		/// <summary>
 		/// Decompile using statements.
 		/// </summary>
-		public bool UsingStatement {
+		public bool UsingStatement
+		{
 			get { return usingStatement; }
 			set {
 				if (usingStatement != value) {
@@ -131,13 +138,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool forEachStatement = true;
-		
+
 		/// <summary>
 		/// Decompile foreach statements.
 		/// </summary>
-		public bool ForEachStatement {
+		public bool ForEachStatement
+		{
 			get { return forEachStatement; }
 			set {
 				if (forEachStatement != value) {
@@ -146,13 +154,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool lockStatement = true;
-		
+
 		/// <summary>
 		/// Decompile lock statements.
 		/// </summary>
-		public bool LockStatement {
+		public bool LockStatement
+		{
 			get { return lockStatement; }
 			set {
 				if (lockStatement != value) {
@@ -161,10 +170,11 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool switchStatementOnString = true;
-		
-		public bool SwitchStatementOnString {
+
+		public bool SwitchStatementOnString
+		{
 			get { return switchStatementOnString; }
 			set {
 				if (switchStatementOnString != value) {
@@ -173,10 +183,11 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool usingDeclarations = true;
-		
-		public bool UsingDeclarations {
+
+		public bool UsingDeclarations
+		{
 			get { return usingDeclarations; }
 			set {
 				if (usingDeclarations != value) {
@@ -185,10 +196,11 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool queryExpressions = true;
-		
-		public bool QueryExpressions {
+
+		public bool QueryExpressions
+		{
 			get { return queryExpressions; }
 			set {
 				if (queryExpressions != value) {
@@ -197,10 +209,11 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool fullyQualifyAmbiguousTypeNames = true;
-		
-		public bool FullyQualifyAmbiguousTypeNames {
+
+		public bool FullyQualifyAmbiguousTypeNames
+		{
 			get { return fullyQualifyAmbiguousTypeNames; }
 			set {
 				if (fullyQualifyAmbiguousTypeNames != value) {
@@ -209,13 +222,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool useDebugSymbols = true;
-		
+
 		/// <summary>
 		/// Gets/Sets whether to use variable names from debug symbols, if available.
 		/// </summary>
-		public bool UseDebugSymbols {
+		public bool UseDebugSymbols
+		{
 			get { return useDebugSymbols; }
 			set {
 				if (useDebugSymbols != value) {
@@ -224,13 +238,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool objectCollectionInitializers = true;
-		
+
 		/// <summary>
 		/// Gets/Sets whether to use C# 3.0 object/collection initializers
 		/// </summary>
-		public bool ObjectOrCollectionInitializers {
+		public bool ObjectOrCollectionInitializers
+		{
 			get { return objectCollectionInitializers; }
 			set {
 				if (objectCollectionInitializers != value) {
@@ -239,13 +254,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool showXmlDocumentation = true;
-		
+
 		/// <summary>
 		/// Gets/Sets whether to include XML documentation comments in the decompiled code
 		/// </summary>
-		public bool ShowXmlDocumentation {
+		public bool ShowXmlDocumentation
+		{
 			get { return showXmlDocumentation; }
 			set {
 				if (showXmlDocumentation != value) {
@@ -256,8 +272,9 @@ namespace ICSharpCode.Decompiler
 		}
 
 		bool foldBraces = false;
-		
-		public bool FoldBraces {
+
+		public bool FoldBraces
+		{
 			get { return foldBraces; }
 			set {
 				if (foldBraces != value) {
@@ -266,14 +283,15 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		#region Options to aid VB decompilation
 		bool introduceIncrementAndDecrement = true;
-		
+
 		/// <summary>
 		/// Gets/Sets whether to use increment and decrement operators
 		/// </summary>
-		public bool IntroduceIncrementAndDecrement {
+		public bool IntroduceIncrementAndDecrement
+		{
 			get { return introduceIncrementAndDecrement; }
 			set {
 				if (introduceIncrementAndDecrement != value) {
@@ -282,13 +300,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool makeAssignmentExpressions = true;
-		
+
 		/// <summary>
 		/// Gets/Sets whether to use assignment expressions such as in while ((count = Do()) != 0) ;
 		/// </summary>
-		public bool MakeAssignmentExpressions {
+		public bool MakeAssignmentExpressions
+		{
 			get { return makeAssignmentExpressions; }
 			set {
 				if (makeAssignmentExpressions != value) {
@@ -297,13 +316,14 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		bool alwaysGenerateExceptionVariableForCatchBlocks = false;
-		
+
 		/// <summary>
 		/// Gets/Sets whether to always generate exception variables in catch blocks
 		/// </summary>
-		public bool AlwaysGenerateExceptionVariableForCatchBlocks {
+		public bool AlwaysGenerateExceptionVariableForCatchBlocks
+		{
 			get { return alwaysGenerateExceptionVariableForCatchBlocks; }
 			set {
 				if (alwaysGenerateExceptionVariableForCatchBlocks != value) {
@@ -313,14 +333,15 @@ namespace ICSharpCode.Decompiler
 			}
 		}
 		#endregion
-		
+
 		CSharpFormattingOptions csharpFormattingOptions;
-		
-		public CSharpFormattingOptions CSharpFormattingOptions {
+
+		public CSharpFormattingOptions CSharpFormattingOptions
+		{
 			get {
 				if (csharpFormattingOptions == null) {
 					csharpFormattingOptions = FormattingOptionsFactory.CreateSharpDevelop();
-                    csharpFormattingOptions.AutoPropertyFormatting = PropertyFormatting.ForceOneLine;
+					csharpFormattingOptions.AutoPropertyFormatting = PropertyFormatting.ForceOneLine;
 					csharpFormattingOptions.IndentSwitchBody = false;
 					csharpFormattingOptions.ArrayInitializerWrapping = Wrapping.WrapAlways;
 				}
@@ -335,16 +356,16 @@ namespace ICSharpCode.Decompiler
 				}
 			}
 		}
-		
+
 		public event PropertyChangedEventHandler PropertyChanged;
-		
+
 		protected virtual void OnPropertyChanged(string propertyName)
 		{
 			if (PropertyChanged != null) {
 				PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 			}
 		}
-		
+
 		public DecompilerSettings Clone()
 		{
 			DecompilerSettings settings = (DecompilerSettings)MemberwiseClone();

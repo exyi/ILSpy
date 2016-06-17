@@ -33,14 +33,14 @@ namespace ICSharpCode.Decompiler.ILAst
 {
 	public abstract class ILNode
 	{
-		public IEnumerable<T> GetSelfAndChildrenRecursive<T>(Func<T, bool> predicate = null) where T: ILNode
+		public IEnumerable<T> GetSelfAndChildrenRecursive<T>(Func<T, bool> predicate = null) where T : ILNode
 		{
 			List<T> result = new List<T>(16);
 			AccumulateSelfAndChildrenRecursive(result, predicate);
 			return result;
 		}
-		
-		void AccumulateSelfAndChildrenRecursive<T>(List<T> list, Func<T, bool> predicate) where T:ILNode
+
+		void AccumulateSelfAndChildrenRecursive<T>(List<T> list, Func<T, bool> predicate) where T : ILNode
 		{
 			// Note: RemoveEndFinally depends on self coming before children
 			T thisAsT = this as T;
@@ -51,76 +51,76 @@ namespace ICSharpCode.Decompiler.ILAst
 					node.AccumulateSelfAndChildrenRecursive(list, predicate);
 			}
 		}
-		
+
 		public virtual IEnumerable<ILNode> GetChildren()
 		{
 			yield break;
 		}
-		
+
 		public override string ToString()
 		{
 			StringWriter w = new StringWriter();
 			WriteTo(new PlainTextOutput(w));
 			return w.ToString().Replace("\r\n", "; ");
 		}
-		
+
 		public abstract void WriteTo(ITextOutput output);
 	}
-	
-	public class ILBlock: ILNode
+
+	public class ILBlock : ILNode
 	{
 		public ILExpression EntryGoto;
-		
+
 		public List<ILNode> Body;
-		
+
 		public ILBlock(params ILNode[] body)
 		{
 			this.Body = new List<ILNode>(body);
 		}
-		
+
 		public ILBlock(List<ILNode> body)
 		{
 			this.Body = body;
 		}
-		
+
 		public override IEnumerable<ILNode> GetChildren()
 		{
 			if (this.EntryGoto != null)
 				yield return this.EntryGoto;
-			foreach(ILNode child in this.Body) {
+			foreach (ILNode child in this.Body) {
 				yield return child;
 			}
 		}
-		
+
 		public override void WriteTo(ITextOutput output)
 		{
-			foreach(ILNode child in this.GetChildren()) {
+			foreach (ILNode child in this.GetChildren()) {
 				child.WriteTo(output);
 				output.WriteLine();
 			}
 		}
 	}
-	
-	public class ILBasicBlock: ILNode
+
+	public class ILBasicBlock : ILNode
 	{
 		/// <remarks> Body has to start with a label and end with unconditional control flow </remarks>
 		public List<ILNode> Body = new List<ILNode>();
-		
+
 		public override IEnumerable<ILNode> GetChildren()
 		{
 			return this.Body;
 		}
-		
+
 		public override void WriteTo(ITextOutput output)
 		{
-			foreach(ILNode child in this.GetChildren()) {
+			foreach (ILNode child in this.GetChildren()) {
 				child.WriteTo(output);
 				output.WriteLine();
 			}
 		}
 	}
-	
-	public class ILLabel: ILNode
+
+	public class ILLabel : ILNode
 	{
 		public string Name;
 
@@ -129,14 +129,14 @@ namespace ICSharpCode.Decompiler.ILAst
 			output.WriteDefinition(Name + ":", this);
 		}
 	}
-	
-	public class ILTryCatchBlock: ILNode
+
+	public class ILTryCatchBlock : ILNode
 	{
-		public class CatchBlock: ILBlock
+		public class CatchBlock : ILBlock
 		{
 			public TypeReference ExceptionType;
 			public ILVariable ExceptionVariable;
-			
+
 			public override void WriteTo(ITextOutput output)
 			{
 				output.Write("catch ");
@@ -152,12 +152,12 @@ namespace ICSharpCode.Decompiler.ILAst
 				output.WriteLine("}");
 			}
 		}
-		
-		public ILBlock          TryBlock;
+
+		public ILBlock TryBlock;
 		public List<CatchBlock> CatchBlocks;
-		public ILBlock          FinallyBlock;
-		public ILBlock          FaultBlock;
-		
+		public ILBlock FinallyBlock;
+		public ILBlock FaultBlock;
+
 		public override IEnumerable<ILNode> GetChildren()
 		{
 			if (this.TryBlock != null)
@@ -170,7 +170,7 @@ namespace ICSharpCode.Decompiler.ILAst
 			if (this.FinallyBlock != null)
 				yield return this.FinallyBlock;
 		}
-		
+
 		public override void WriteTo(ITextOutput output)
 		{
 			output.WriteLine(".try {");
@@ -197,52 +197,54 @@ namespace ICSharpCode.Decompiler.ILAst
 			}
 		}
 	}
-	
+
 	public class ILVariable
 	{
 		public string Name;
-		public bool   IsGenerated;
+		public bool IsGenerated;
 		public TypeReference Type;
 		public VariableDefinition OriginalVariable;
 		public ParameterDefinition OriginalParameter;
-		
-		public bool IsPinned {
+
+		public bool IsPinned
+		{
 			get { return OriginalVariable != null && OriginalVariable.IsPinned; }
 		}
-		
-		public bool IsParameter {
+
+		public bool IsParameter
+		{
 			get { return OriginalParameter != null; }
 		}
-		
+
 		public override string ToString()
 		{
 			return Name;
 		}
 	}
-	
+
 	public struct ILRange
 	{
 		public readonly int From;
 		public readonly int To;   // Exlusive
-		
+
 		public ILRange(int @from, int to)
 		{
 			this.From = @from;
 			this.To = to;
 		}
-		
+
 		public override string ToString()
 		{
 			return string.Format("{0:X2}-{1:X2}", From, To);
 		}
-		
+
 		public static List<ILRange> OrderAndJoin(IEnumerable<ILRange> input)
 		{
 			if (input == null)
 				throw new ArgumentNullException("Input is null!");
-			
+
 			List<ILRange> result = new List<ILRange>();
-			foreach(ILRange curr in input.OrderBy(r => r.From)) {
+			foreach (ILRange curr in input.OrderBy(r => r.From)) {
 				if (result.Count > 0) {
 					// Merge consequtive ranges if possible
 					ILRange last = result[result.Count - 1];
@@ -255,15 +257,15 @@ namespace ICSharpCode.Decompiler.ILAst
 			}
 			return result;
 		}
-		
+
 		public static List<ILRange> Invert(IEnumerable<ILRange> input, int codeSize)
 		{
 			if (input == null)
 				throw new ArgumentNullException("Input is null!");
-			
+
 			if (codeSize <= 0)
 				throw new ArgumentException("Code size must be grater than 0");
-			
+
 			List<ILRange> ordered = OrderAndJoin(input);
 			List<ILRange> result = new List<ILRange>(ordered.Count + 1);
 			if (ordered.Count == 0) {
@@ -272,11 +274,11 @@ namespace ICSharpCode.Decompiler.ILAst
 				// Gap before the first element
 				if (ordered.First().From != 0)
 					result.Add(new ILRange(0, ordered.First().From));
-				
+
 				// Gaps between elements
 				for (int i = 0; i < ordered.Count - 1; i++)
 					result.Add(new ILRange(ordered[i].To, ordered[i + 1].From));
-				
+
 				// Gap after the last element
 				Debug.Assert(ordered.Last().To <= codeSize);
 				if (ordered.Last().To != codeSize)
@@ -285,19 +287,19 @@ namespace ICSharpCode.Decompiler.ILAst
 			return result;
 		}
 	}
-	
+
 	public class ILExpressionPrefix
 	{
 		public readonly ILCode Code;
 		public readonly object Operand;
-		
+
 		public ILExpressionPrefix(ILCode code, object operand = null)
 		{
 			this.Code = code;
 			this.Operand = operand;
 		}
 	}
-	
+
 	public class ILExpression : ILNode
 	{
 		public ILCode Code { get; set; }
@@ -306,34 +308,34 @@ namespace ICSharpCode.Decompiler.ILAst
 		public ILExpressionPrefix[] Prefixes { get; set; }
 		// Mapping to the original instructions (useful for debugging)
 		public List<ILRange> ILRanges { get; set; }
-		
+
 		public TypeReference ExpectedType { get; set; }
 		public TypeReference InferredType { get; set; }
-		
+
 		public static readonly object AnyOperand = new object();
-		
+
 		public ILExpression(ILCode code, object operand, List<ILExpression> args)
 		{
 			if (operand is ILExpression)
 				throw new ArgumentException("operand");
-			
+
 			this.Code = code;
 			this.Operand = operand;
 			this.Arguments = new List<ILExpression>(args);
-			this.ILRanges  = new List<ILRange>(1);
+			this.ILRanges = new List<ILRange>(1);
 		}
-		
+
 		public ILExpression(ILCode code, object operand, params ILExpression[] args)
 		{
 			if (operand is ILExpression)
 				throw new ArgumentException("operand");
-			
+
 			this.Code = code;
 			this.Operand = operand;
 			this.Arguments = new List<ILExpression>(args);
-			this.ILRanges  = new List<ILRange>(1);
+			this.ILRanges = new List<ILRange>(1);
 		}
-		
+
 		public void AddPrefix(ILExpressionPrefix prefix)
 		{
 			ILExpressionPrefix[] arr = this.Prefixes;
@@ -344,7 +346,7 @@ namespace ICSharpCode.Decompiler.ILAst
 			arr[arr.Length - 1] = prefix;
 			this.Prefixes = arr;
 		}
-		
+
 		public ILExpressionPrefix GetPrefix(ILCode code)
 		{
 			var prefixes = this.Prefixes;
@@ -356,17 +358,17 @@ namespace ICSharpCode.Decompiler.ILAst
 			}
 			return null;
 		}
-		
+
 		public override IEnumerable<ILNode> GetChildren()
 		{
 			return Arguments;
 		}
-		
+
 		public bool IsBranch()
 		{
 			return this.Operand is ILLabel || this.Operand is ILLabel[];
 		}
-		
+
 		public IEnumerable<ILLabel> GetBranchTargets()
 		{
 			if (this.Operand is ILLabel) {
@@ -377,7 +379,7 @@ namespace ICSharpCode.Decompiler.ILAst
 				return new ILLabel[] { };
 			}
 		}
-		
+
 		public override void WriteTo(ITextOutput output)
 		{
 			if (Operand is ILVariable && ((ILVariable)Operand).IsGenerated) {
@@ -400,14 +402,14 @@ namespace ICSharpCode.Decompiler.ILAst
 					return;
 				}
 			}
-			
+
 			if (this.Prefixes != null) {
 				foreach (var prefix in this.Prefixes) {
 					output.Write(prefix.Code.GetName());
 					output.Write(". ");
 				}
 			}
-			
+
 			output.Write(Code.GetName());
 			if (this.InferredType != null) {
 				output.Write(':');
@@ -459,22 +461,23 @@ namespace ICSharpCode.Decompiler.ILAst
 			output.Write(')');
 		}
 
-        public ILExpression Clone()
-        {
-            return new ILExpression(Code, Operand, Arguments?.Select(a => a?.Clone())?.ToArray()) {
-                ILRanges = ILRanges?.ToList(),
-                ExpectedType = ExpectedType,
-                InferredType = InferredType,
-                Prefixes = Prefixes?.ToArray()
-            };
-        }
+		public ILExpression Clone()
+		{
+			return new ILExpression(Code, Operand, Arguments?.Select(a => a?.Clone())?.ToArray())
+			{
+				ILRanges = ILRanges?.ToList(),
+				ExpectedType = ExpectedType,
+				InferredType = InferredType,
+				Prefixes = Prefixes?.ToArray()
+			};
+		}
 	}
-	
+
 	public class ILWhileLoop : ILNode
 	{
 		public ILExpression Condition;
-		public ILBlock      BodyBlock;
-		
+		public ILBlock BodyBlock;
+
 		public override IEnumerable<ILNode> GetChildren()
 		{
 			if (this.Condition != null)
@@ -482,7 +485,7 @@ namespace ICSharpCode.Decompiler.ILAst
 			if (this.BodyBlock != null)
 				yield return this.BodyBlock;
 		}
-		
+
 		public override void WriteTo(ITextOutput output)
 		{
 			output.WriteLine("");
@@ -496,13 +499,13 @@ namespace ICSharpCode.Decompiler.ILAst
 			output.WriteLine("}");
 		}
 	}
-	
+
 	public class ILCondition : ILNode
 	{
 		public ILExpression Condition;
 		public ILBlock TrueBlock;   // Branch was taken
 		public ILBlock FalseBlock;  // Fall-though
-		
+
 		public override IEnumerable<ILNode> GetChildren()
 		{
 			if (this.Condition != null)
@@ -512,7 +515,7 @@ namespace ICSharpCode.Decompiler.ILAst
 			if (this.FalseBlock != null)
 				yield return this.FalseBlock;
 		}
-		
+
 		public override void WriteTo(ITextOutput output)
 		{
 			output.Write("if (");
@@ -531,13 +534,13 @@ namespace ICSharpCode.Decompiler.ILAst
 			}
 		}
 	}
-	
-	public class ILSwitch: ILNode
+
+	public class ILSwitch : ILNode
 	{
-		public class CaseBlock: ILBlock
+		public class CaseBlock : ILBlock
 		{
 			public List<int> Values;  // null for the default case
-			
+
 			public override void WriteTo(ITextOutput output)
 			{
 				if (this.Values != null) {
@@ -552,10 +555,10 @@ namespace ICSharpCode.Decompiler.ILAst
 				output.Unindent();
 			}
 		}
-		
+
 		public ILExpression Condition;
 		public List<CaseBlock> CaseBlocks = new List<CaseBlock>();
-		
+
 		public override IEnumerable<ILNode> GetChildren()
 		{
 			if (this.Condition != null)
@@ -564,7 +567,7 @@ namespace ICSharpCode.Decompiler.ILAst
 				yield return caseBlock;
 			}
 		}
-		
+
 		public override void WriteTo(ITextOutput output)
 		{
 			output.Write("switch (");
@@ -578,12 +581,12 @@ namespace ICSharpCode.Decompiler.ILAst
 			output.WriteLine("}");
 		}
 	}
-	
+
 	public class ILFixedStatement : ILNode
 	{
 		public List<ILExpression> Initializers = new List<ILExpression>();
-		public ILBlock      BodyBlock;
-		
+		public ILBlock BodyBlock;
+
 		public override IEnumerable<ILNode> GetChildren()
 		{
 			foreach (ILExpression initializer in this.Initializers)
@@ -591,7 +594,7 @@ namespace ICSharpCode.Decompiler.ILAst
 			if (this.BodyBlock != null)
 				yield return this.BodyBlock;
 		}
-		
+
 		public override void WriteTo(ITextOutput output)
 		{
 			output.Write("fixed (");

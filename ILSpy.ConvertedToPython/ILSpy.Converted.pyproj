@@ -1,0 +1,419 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <ProjectGuid>{CAE5BD58-FB7A-4625-B813-D4AEC4CE5C01}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>ICSharpCode.ILSpy</RootNamespace>
+    <AssemblyName>ILSpy</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <NoStdLib>False</NoStdLib>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <ApplicationIcon>Images\ILSpy-Large.ico</ApplicationIcon>
+    <RunCodeAnalysis>False</RunCodeAnalysis>
+    <StartArguments>/separate</StartArguments>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\NRefactory\ICSharpCode.NRefactory.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>False</DelaySign>
+    <AssemblyOriginatorKeyMode>File</AssemblyOriginatorKeyMode>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <RegisterForComInterop>False</RegisterForComInterop>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+    <BaseAddress>4194304</BaseAddress>
+    <FileAlignment>4096</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <RegisterForComInterop>False</RegisterForComInterop>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+    <BaseAddress>4194304</BaseAddress>
+    <FileAlignment>4096</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>Full</DebugType>
+    <Optimize>False</Optimize>
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <StartAction>Project</StartAction>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>PdbOnly</DebugType>
+    <Optimize>True</Optimize>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="IronPython">
+      <HintPath>$(PythonBinPath)\IronPython.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="PresentationFramework">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition">
+      <RequiredTargetFramework>4.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml">
+      <RequiredTargetFramework>4.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="WindowsBase">
+      <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AboutPage.py" />
+    <Compile Include="AnalyzerTreeView.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="App.xaml.py">
+      <SubType>Code</SubType>
+      <DependentUpon>App.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="AssemblyList.py" />
+    <Compile Include="AssemblyListManager.py" />
+    <Compile Include="AvalonEdit\ITextMarker.py" />
+    <Compile Include="AvalonEdit\SimpleSegment.py" />
+    <Compile Include="AvalonEdit\TextMarkerService.py" />
+    <Compile Include="CommandLineArguments.py" />
+    <Compile Include="Commands\BrowseBackCommand.py" />
+    <Compile Include="Commands\BrowseForwardCommand.py" />
+    <Compile Include="Commands\CheckForUpdatesCommand.py" />
+    <Compile Include="Commands\CommandWrapper.py" />
+    <Compile Include="Commands\DecompileAllCommand.py" />
+    <Compile Include="Commands\ExitCommand.py" />
+    <Compile Include="Commands\ExportCommandAttribute.py" />
+    <Compile Include="Commands\OpenCommand.py" />
+    <Compile Include="Commands\OpenFromGacCommand.py" />
+    <Compile Include="Commands\OpenListCommand.py" />
+    <Compile Include="Commands\RefreshCommand.py" />
+    <Compile Include="Commands\SaveCommand.py" />
+    <Compile Include="Commands\SimpleCommand.py" />
+    <Compile Include="Commands\SortAssemblyListCommand.py" />
+    <Compile Include="ContextMenuEntry.py" />
+    <Compile Include="Controls\DockedPane.py" />
+    <Compile Include="Controls\ExtensionMethods.py" />
+    <Compile Include="Controls\MarkupExtensions.py" />
+    <Compile Include="Controls\ResourceObjectTable.xaml.py">
+      <DependentUpon>ResourceObjectTable.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ResourceStringTable.xaml.py">
+      <DependentUpon>ResourceStringTable.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Controls\SearchBox.py" />
+    <Compile Include="Controls\SortableGridViewColumn.py" />
+    <Compile Include="CreateListDialog.xaml.py">
+      <DependentUpon>CreateListDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DecompilationOptions.py" />
+    <Compile Include="DecompileEventArgs.py" />
+    <Compile Include="ExtensionMethods.py" />
+    <Compile Include="FilterSettings.py" />
+    <Compile Include="Fusion.py" />
+    <Compile Include="GacInterop.py" />
+    <Compile Include="GuessFileType.py" />
+    <Compile Include="ILSpySettings.py" />
+    <Compile Include="Images\AccessOverlayIcon.py" />
+    <Compile Include="Images\Images.py" />
+    <Compile Include="Images\MemberIcon.py" />
+    <Compile Include="Images\TypeIcon.py" />
+    <Compile Include="IPane.py" />
+    <Compile Include="ISmartTextOutput.py" />
+    <Compile Include="Languages\CSharpLanguage.py" />
+    <Compile Include="Languages\ILAstLanguage.py" />
+    <Compile Include="Languages\ILLanguage.py" />
+    <Compile Include="Languages\IResourceFileHandler.py" />
+    <Compile Include="Languages\Language.py" />
+    <Compile Include="Languages\Languages.py" />
+    <Compile Include="LoadedAssembly.py" />
+    <Compile Include="MainWindow.xaml.py">
+      <SubType>Code</SubType>
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="NativeMethods.py" />
+    <Compile Include="NavigationHistory.py" />
+    <Compile Include="NavigationState.py" />
+    <Compile Include="OpenFromGacDialog.xaml.py">
+      <DependentUpon>OpenFromGacDialog.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="OpenListDialog.xaml.py">
+      <DependentUpon>OpenListDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Options\DecompilerSettingsPanel.xaml.py">
+      <DependentUpon>DecompilerSettingsPanel.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Options\DisplaySettings.py" />
+    <Compile Include="Options\DisplaySettingsPanel.xaml.py">
+      <DependentUpon>DisplaySettingsPanel.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Options\OptionsDialog.xaml.py">
+      <DependentUpon>OptionsDialog.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.py" />
+    <Compile Include="Properties\WPFAssemblyInfo.py" />
+    <Compile Include="SearchPane.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="SearchStrategies.py" />
+    <Compile Include="SessionSettings.py" />
+    <Compile Include="TaskHelper.py" />
+    <Compile Include="TextView\AvalonEditTextOutput.py" />
+    <Compile Include="TextView\CaretHighlightAdorner.py" />
+    <Compile Include="TextView\DecompilerTextView.py" />
+    <Compile Include="TextView\EditorCommands.py" />
+    <Compile Include="TextView\FoldingCommands.py" />
+    <Compile Include="TextView\OutputLengthExceededException.py" />
+    <Compile Include="TextView\ReferenceElementGenerator.py" />
+    <Compile Include="TextView\UIElementGenerator.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzeContextMenuEntry.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedAssemblyTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedAttributeAppliedToTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedEventAccessorTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedEventFiredByTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedEventOverridesTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedEventTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedFieldAccessTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedFieldTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedInterfaceEventImplementedByTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedInterfaceMethodImplementedByTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedInterfacePropertyImplementedByTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedMethodOverridesTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedMethodTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedMethodUsedByTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedMethodUsesTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedPropertyAccessorTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedPropertyOverridesTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedPropertyTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedTypeExposedByTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedTypeExtensionMethodsTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedTypeInstantiationsTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedTypeTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedTypeUsedByTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzedVirtualMethodUsedByTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzerEntityTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzerSearchTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\AnalyzerTreeNode.py" />
+    <Compile Include="TreeNodes\Analyzer\Helpers.py" />
+    <Compile Include="TreeNodes\Analyzer\RemoveAnalyzeContextMenuEntry.py" />
+    <Compile Include="TreeNodes\Analyzer\ScopedWhereUsedAnalyzer.py" />
+    <Compile Include="TreeNodes\AssemblyListTreeNode.py" />
+    <Compile Include="TreeNodes\AssemblyReferenceTreeNode.py" />
+    <Compile Include="TreeNodes\AssemblyTreeNode.py" />
+    <Compile Include="TreeNodes\BaseTypesEntryNode.py" />
+    <Compile Include="TreeNodes\BaseTypesTreeNode.py" />
+    <Compile Include="TreeNodes\DerivedTypesEntryNode.py" />
+    <Compile Include="TreeNodes\DerivedTypesTreeNode.py" />
+    <Compile Include="TreeNodes\EventTreeNode.py" />
+    <Compile Include="TreeNodes\FieldTreeNode.py" />
+    <Compile Include="TreeNodes\FilterResult.py" />
+    <Compile Include="TreeNodes\ILSpyTreeNode.py" />
+    <Compile Include="TreeNodes\IMemberTreeNode.py" />
+    <Compile Include="TreeNodes\MethodTreeNode.py" />
+    <Compile Include="TreeNodes\ModuleReferenceTreeNode.py" />
+    <Compile Include="TreeNodes\NamespaceTreeNode.py" />
+    <Compile Include="TreeNodes\PropertyTreeNode.py" />
+    <Compile Include="TreeNodes\ReferenceFolderTreeNode.py" />
+    <Compile Include="TreeNodes\ResourceListTreeNode.py" />
+    <Compile Include="TreeNodes\ResourceNodes\CursorResourceEntryNode.py" />
+    <Compile Include="TreeNodes\ResourceNodes\IconResourceEntryNode.py" />
+    <Compile Include="TreeNodes\ResourceNodes\ImageListResourceEntryNode.py" />
+    <Compile Include="TreeNodes\ResourceNodes\ImageResourceEntryNode.py" />
+    <Compile Include="TreeNodes\ResourceNodes\IResourceNodeFactory.py" />
+    <Compile Include="TreeNodes\ResourceNodes\ResourceEntryNode.py" />
+    <Compile Include="TreeNodes\ResourceNodes\ResourcesFileTreeNode.py" />
+    <Compile Include="TreeNodes\ResourceNodes\ResourceTreeNode.py" />
+    <Compile Include="TreeNodes\ResourceNodes\XamlResourceNode.py" />
+    <Compile Include="TreeNodes\ResourceNodes\XmlResourceNode.py" />
+    <Compile Include="TreeNodes\SearchMsdnContextMenuEntry.py" />
+    <Compile Include="TreeNodes\ThreadingSupport.py" />
+    <Compile Include="TreeNodes\TypeTreeNode.py" />
+    <Compile Include="VB\ILSpyEnvironmentProvider.py" />
+    <Compile Include="VB\VBLanguage.py" />
+    <Compile Include="VB\VBTextOutputFormatter.py" />
+    <Compile Include="XmlDoc\AddXmlDocTransform.py" />
+    <Compile Include="XmlDoc\XmlDocKeyProvider.py" />
+    <Compile Include="XmlDoc\XmlDocLoader.py" />
+    <Compile Include="XmlDoc\XmlDocRenderer.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\doc\LGPL.txt">
+      <Link>LGPL.txt</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\doc\license.txt">
+      <Link>license.txt</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\doc\MS-PL.txt">
+      <Link>MS-PL.txt</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\README.txt">
+      <Link>README.txt</Link>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TextView\ILAsm-Mode.xshd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\Assembly.png" />
+    <Resource Include="Images\AssemblyList.png" />
+    <Resource Include="Images\AssemblyListGAC.png" />
+    <Resource Include="Images\AssemblyWarning.png" />
+    <Resource Include="Images\Back.png" />
+    <Resource Include="Images\Breakpoint.png" />
+    <Resource Include="Images\Class.png" />
+    <Resource Include="Images\ClearSearch.png" />
+    <Resource Include="Images\Constructor.png" />
+    <Resource Include="Images\CurrentLine.png" />
+    <Resource Include="Images\Delegate.png" />
+    <Resource Include="Images\Delete.png" />
+    <Resource Include="Images\DisabledBreakpoint.png" />
+    <Resource Include="Images\Enum.png" />
+    <Resource Include="Images\EnumValue.png" />
+    <Resource Include="Images\Event.png" />
+    <Resource Include="Images\ExtensionMethod.png" />
+    <Resource Include="Images\Field.png" />
+    <Resource Include="Images\FieldReadOnly.png" />
+    <Resource Include="Images\Find.png" />
+    <Resource Include="Images\FindAssembly.png" />
+    <Resource Include="Images\Folder.Closed.png" />
+    <Resource Include="Images\Folder.Open.png" />
+    <Resource Include="Images\Forward.png" />
+    <Resource Include="Images\ILSpy.ico" />
+    <Resource Include="Images\Indexer.png" />
+    <Resource Include="Images\Interface.png" />
+    <Resource Include="Images\Library.png" />
+    <Resource Include="Images\Literal.png" />
+    <Resource Include="Images\Method.png" />
+    <Resource Include="Images\NameSpace.png" />
+    <Resource Include="Images\OK.png" />
+    <Resource Include="Images\Open.png" />
+    <Resource Include="Images\Operator.png" />
+    <Resource Include="Images\OverlayCompilerControlled.png" />
+    <Resource Include="Images\OverlayInternal.png" />
+    <Resource Include="Images\OverlayPrivate.png" />
+    <Resource Include="Images\OverlayProtected.png" />
+    <Resource Include="Images\OverlayProtectedInternal.png" />
+    <Resource Include="Images\OverlayStatic.png" />
+    <Resource Include="Images\PInvokeMethod.png" />
+    <Resource Include="Images\PrivateInternal.png" />
+    <Resource Include="Images\Property.png" />
+    <Resource Include="Images\ReferenceFolder.Closed.png" />
+    <Resource Include="Images\ReferenceFolder.Open.png" />
+    <Resource Include="Images\Refresh.png" />
+    <Resource Include="Images\Resource.png" />
+    <Resource Include="Images\ResourceImage.png" />
+    <Resource Include="Images\ResourceResourcesFile.png" />
+    <Resource Include="Images\ResourceXml.png" />
+    <Resource Include="Images\ResourceXsd.png" />
+    <Resource Include="Images\ResourceXslt.png" />
+    <Resource Include="Images\SaveFile.png" />
+    <Resource Include="Images\Search.png" />
+    <Resource Include="Images\SearchMsdn.png" />
+    <Resource Include="Images\Sort.png" />
+    <Resource Include="Images\StaticClass.png" />
+    <Resource Include="Images\Struct.png" />
+    <Resource Include="Images\SubTypes.png" />
+    <Resource Include="Images\SuperTypes.png" />
+    <Resource Include="Images\ViewCode.png" />
+    <Resource Include="Images\VirtualMethod.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="Images\ResourceXsl.png" />
+    <None Include="Properties\app.config.template" />
+    <None Include="Properties\AssemblyInfo.template.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="Controls\ResourceObjectTable.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\ResourceStringTable.xaml" />
+    <Page Include="Controls\SearchBoxStyle.xaml">
+      <DependentUpon>SearchBox.cs</DependentUpon>
+    </Page>
+    <Page Include="CreateListDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MainWindow.xaml" />
+    <Page Include="OpenFromGacDialog.xaml" />
+    <Page Include="OpenListDialog.xaml" />
+    <Page Include="Options\DecompilerSettingsPanel.xaml" />
+    <Page Include="Options\DisplaySettingsPanel.xaml" />
+    <Page Include="Options\OptionsDialog.xaml" />
+    <Page Include="SearchPane.xaml">
+      <DependentUpon>SearchPane.cs</DependentUpon>
+    </Page>
+    <Page Include="TextView\DecompilerTextView.xaml">
+      <DependentUpon>DecompilerTextView.cs</DependentUpon>
+    </Page>
+    <Page Include="themes\generic.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AvalonEdit\ICSharpCode.AvalonEdit\ICSharpCode.AvalonEdit.csproj">
+      <Project>{6c55b776-26d4-4db3-a6ab-87e783b2f3d1}</Project>
+      <Name>ICSharpCode.AvalonEdit</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\cecil\Mono.Cecil.csproj">
+      <Project>{d68133bd-1e63-496e-9ede-4fbdbf77b486}</Project>
+      <Name>Mono.Cecil</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\cecil\symbols\pdb\Mono.Cecil.Pdb.csproj">
+      <Project>{63e6915c-7ea4-4d76-ab28-0d7191eea626}</Project>
+      <Name>Mono.Cecil.Pdb</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ICSharpCode.Decompiler\ICSharpCode.Decompiler.csproj">
+      <Project>{984cc812-9470-4a13-aff9-cc44068d666c}</Project>
+      <Name>ICSharpCode.Decompiler</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NRefactory.VB\ICSharpCode.NRefactory.VB\ICSharpCode.NRefactory.VB.csproj">
+      <Project>{7b82b671-419f-45f4-b778-d9286f996efa}</Project>
+      <Name>ICSharpCode.NRefactory.VB</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NRefactory\ICSharpCode.NRefactory.CSharp\ICSharpCode.NRefactory.CSharp.csproj">
+      <Project>{53dca265-3c3c-42f9-b647-f72ba678122b}</Project>
+      <Name>ICSharpCode.NRefactory.CSharp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NRefactory\ICSharpCode.NRefactory\ICSharpCode.NRefactory.csproj">
+      <Project>{3b2a5653-ec97-4001-bb9b-d90f1af2c371}</Project>
+      <Name>ICSharpCode.NRefactory</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SharpTreeView\ICSharpCode.TreeView.csproj">
+      <Project>{dde2a481-8271-4eac-a330-8fa6a38d13d1}</Project>
+      <Name>ICSharpCode.TreeView</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(PythonBinPath)\SharpDevelop.Build.Python.targets" />
+</Project>

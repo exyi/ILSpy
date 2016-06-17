@@ -26,7 +26,7 @@ namespace ICSharpCode.Decompiler.Ast.Transforms
 	{
 		void Run(AstNode compilationUnit);
 	}
-	
+
 	public static class TransformationPipeline
 	{
 		public static IAstTransform[] CreatePipeline(DecompilerContext context)
@@ -46,15 +46,15 @@ namespace ICSharpCode.Decompiler.Ast.Transforms
 				new IntroduceExtensionMethods(context), // must run after IntroduceUsingDeclarations
 				new IntroduceQueryExpressions(context), // must run after IntroduceExtensionMethods
 				new CombineQueryExpressions(context),
-				new FlattenSwitchBlocks(), 
+				new FlattenSwitchBlocks(),
 			};
 		}
-		
+
 		public static void RunTransformationsUntil(AstNode node, Predicate<IAstTransform> abortCondition, DecompilerContext context)
 		{
 			if (node == null)
 				return;
-			
+
 			foreach (var transform in CreatePipeline(context)) {
 				context.CancellationToken.ThrowIfCancellationRequested();
 				if (abortCondition != null && abortCondition(transform))
