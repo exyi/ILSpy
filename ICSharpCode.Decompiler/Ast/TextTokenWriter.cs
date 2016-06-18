@@ -192,18 +192,25 @@ namespace ICSharpCode.Decompiler.Ast
 			if (keyword == "this") {
 				var reference = nodeStack.Peek().Annotation<ILVariable>()?.Type;
 				if (reference != null) {
-					output.WriteReference(keyword, reference, false);
+					output.WriteReference(keyword, reference, false, SpecialSegmentType.Keyword);
 					return;
 				}
 			}
 			if (keyword == "base" && nodeStack.Peek() is BaseReferenceExpression) {
 				var typeReference = nodeStack.Peek().Annotation<TypeReference>();
 				if (typeReference != null) {
-					output.WriteReference(keyword, typeReference, false);
+					output.WriteReference(keyword, typeReference, false, SpecialSegmentType.Keyword);
 					return;
 				}
 			}
-			output.Write(keyword);
+			if((keyword == "get" || keyword == "set" || keyword == "remove" || keyword == "add") && nodeStack.Peek() is Accessor) {
+				var reference = nodeStack.Peek().Annotation<MemberReference>();
+				if(reference != null) {
+					output.WriteReference(keyword, reference, false, SpecialSegmentType.Keyword);
+					return;
+				}
+			}
+			output.Write(keyword, SpecialSegmentType.Keyword);
 		}
 
 		public override void WriteToken(Role role, string token)
@@ -211,7 +218,7 @@ namespace ICSharpCode.Decompiler.Ast
 			// Attach member reference to token only if there's no identifier in the current node.
 			MemberReference memberRef = GetCurrentMemberReference();
 			var node = nodeStack.Peek();
-			if (memberRef != null && node.GetChildByRole(Roles.Identifier).IsNull && !(node is FieldDeclaration))
+			if (memberRef != null && node.GetChildByRole(Roles.Identifier).IsNull && !(node is FieldDeclaration || node is Accessor))
 				output.WriteReference(token, memberRef);
 			else
 				output.Write(token);
@@ -268,13 +275,13 @@ namespace ICSharpCode.Decompiler.Ast
 		{
 			switch (commentType) {
 				case CommentType.SingleLine:
-					output.Write("//");
-					output.WriteLine(content);
+					output.Write("//", SpecialSegmentType.Comment);
+					output.WriteLine(content, SpecialSegmentType.Comment);
 					break;
 				case CommentType.MultiLine:
-					output.Write("/*");
-					output.Write(content);
-					output.Write("*/");
+					output.Write("/*", SpecialSegmentType.Comment);
+					output.Write(content, SpecialSegmentType.Comment);
+					output.Write("*/", SpecialSegmentType.Comment);
 					break;
 				case CommentType.Documentation:
 					bool isLastLine = !(nodeStack.Peek().NextSibling is Comment);
@@ -291,7 +298,7 @@ namespace ICSharpCode.Decompiler.Ast
 					output.WriteLine();
 					break;
 				default:
-					output.Write(content);
+					output.Write(content, SpecialSegmentType.Comment);
 					break;
 			}
 		}
@@ -315,7 +322,7 @@ namespace ICSharpCode.Decompiler.Ast
 
 		public override void WritePrimitiveType(string type)
 		{
-			output.Write(type);
+			output.Write(type, SpecialSegmentType.Keyword);
 			if (type == "new") {
 				output.Write("()");
 			}

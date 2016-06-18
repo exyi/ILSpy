@@ -97,12 +97,12 @@ namespace ICSharpCode.Decompiler
 			column = 1;
 		}
 		
-		public void WriteDefinition(string text, object definition, bool isLocal)
+		public void WriteDefinition(string text, object definition, bool isLocal, SpecialSegmentType type = SpecialSegmentType.None)
 		{
 			Write(text);
 		}
 		
-		public void WriteReference(string text, object reference, bool isLocal)
+		public void WriteReference(string text, object reference, bool isLocal, SpecialSegmentType type = SpecialSegmentType.None)
 		{
 			Write(text);
 		}
@@ -117,6 +117,11 @@ namespace ICSharpCode.Decompiler
 		
 		void ITextOutput.AddDebugSymbols(MethodDebugSymbols methodDebugSymbols)
 		{
+		}
+
+		public void Write(string text, SpecialSegmentType specialType)
+		{
+			Write(text);
 		}
 	}
 }

@@ -69,6 +69,7 @@ namespace ICSharpCode.ILSpy.TextView
 
 		DefinitionLookup definitionLookup;
 		TextSegmentCollection<ReferenceSegment> references;
+		TextSegmentCollection<HighlightedSegment> highlightedSegments;
 		CancellationTokenSource currentCancellationTokenSource;
 
 		readonly TextMarkerService textMarkerService;
@@ -117,6 +118,8 @@ namespace ICSharpCode.ILSpy.TextView
 			textMarkerService = new TextMarkerService(textEditor.TextArea.TextView);
 			textEditor.TextArea.TextView.BackgroundRenderers.Add(textMarkerService);
 			textEditor.TextArea.TextView.LineTransformers.Add(textMarkerService);
+			codeHighlighter = new SemanticCodeHighlighter();
+			textEditor.TextArea.TextView.LineTransformers.Add(codeHighlighter);
 			textEditor.ShowLineNumbers = true;
 			DisplaySettingsPanel.CurrentDisplaySettings.PropertyChanged += CurrentDisplaySettings_PropertyChanged;
 
@@ -135,6 +138,7 @@ namespace ICSharpCode.ILSpy.TextView
 		private void Document_TextChanged(object sender, DocumentChangeEventArgs e)
 		{
 			references.UpdateOffsets(e);
+			highlightedSegments.UpdateOffsets(e);
 			if (e.RemovalLength == 0) {
 				foreach (var containingSegment in references.FindSegmentsContaining(e.Offset)) {
 					// lenghten containing spans
@@ -424,8 +428,11 @@ namespace ICSharpCode.ILSpy.TextView
 			textEditor.Document = null; // clear old document while we're changing the highlighting
 			uiElementGenerator.UIElements = textOutput.UIElements;
 			referenceElementGenerator.References = textOutput.References;
+			//textOutput.SpecialSegments.UpdateOffsets
 			references = textOutput.References;
+			highlightedSegments = textOutput.HighlightedSegments;
 			definitionLookup = textOutput.DefinitionLookup;
+			codeHighlighter.SetSegments(textOutput);
 			textEditor.SyntaxHighlighting = highlighting;
 
 			// Change the set of active element generators:
@@ -464,6 +471,7 @@ namespace ICSharpCode.ILSpy.TextView
 		public const int ExtendedOutputLengthLimit = 75000000;
 
 		DecompilationContext nextDecompilationRun;
+		private readonly SemanticCodeHighlighter codeHighlighter;
 
 		[Obsolete("Use DecompileAsync() instead")]
 		public void Decompile(ILSpy.Language language, IEnumerable<ILSpyTreeNode> treeNodes, DecompilationOptions options)
@@ -669,7 +677,7 @@ namespace ICSharpCode.ILSpy.TextView
 				foreach (var r in references) {
 					if (reference.Equals(r.Reference)) {
 						var mark = textMarkerService.Create(r.StartOffset, r.Length);
-						mark.BackgroundColor = r.IsLocalTarget ? Colors.LightSeaGreen : Colors.GreenYellow;
+						mark.BackgroundColor = r.IsLocalTarget ? Color.FromRgb(64, 111, 17) : Color.FromRgb(14, 58, 108);
 						localReferenceMarks.Add(mark);
 					}
 				}

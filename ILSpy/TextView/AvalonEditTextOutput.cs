@@ -39,7 +39,7 @@ namespace ICSharpCode.ILSpy.TextView
 		public bool IsLocal;
 		public bool IsLocalTarget;
 	}
-	
+
 	/// <summary>
 	/// Stores the positions of the definitions that were written to the text output.
 	/// </summary>
@@ -61,6 +61,16 @@ namespace ICSharpCode.ILSpy.TextView
 			definitions[definition] = offset;
 		}
 	}
+
+	public sealed class HighlightedSegment: TextSegment
+	{
+		public readonly SpecialSegmentType Type;
+		public HighlightedSegment(SpecialSegmentType type)
+		{
+			this.Type = type;
+		}
+	}
+
 	
 	/// <summary>
 	/// Text output implementation for AvalonEdit.
@@ -104,6 +114,8 @@ namespace ICSharpCode.ILSpy.TextView
 		internal TextSegmentCollection<ReferenceSegment> References {
 			get { return references; }
 		}
+
+		internal TextSegmentCollection<HighlightedSegment> HighlightedSegments { get; } = new TextSegmentCollection<HighlightedSegment>();
 		
 		public void AddVisualLineElementGenerator(VisualLineElementGenerator elementGenerator)
 		{
@@ -186,10 +198,13 @@ namespace ICSharpCode.ILSpy.TextView
 			b.Append(ch);
 		}
 		
-		public void Write(string text)
+		public void Write(string text, SpecialSegmentType specialtype = SpecialSegmentType.None)
 		{
 			WriteIndent();
 			b.Append(text);
+			if (specialtype != SpecialSegmentType.None) {
+				HighlightedSegments.Add(new HighlightedSegment(specialtype) { StartOffset = TextLength - text.Length, EndOffset = TextLength });
+			}
 		}
 		
 		public void WriteLine()
@@ -204,7 +219,7 @@ namespace ICSharpCode.ILSpy.TextView
 			}
 		}
 		
-		public void WriteDefinition(string text, object definition, bool isLocal)
+		public void WriteDefinition(string text, object definition, bool isLocal, SpecialSegmentType specialtype = SpecialSegmentType.None)
 		{
 			WriteIndent();
 			int start = this.TextLength;
@@ -212,15 +227,21 @@ namespace ICSharpCode.ILSpy.TextView
 			int end = this.TextLength;
 			this.DefinitionLookup.AddDefinition(definition, this.TextLength);
 			references.Add(new ReferenceSegment { StartOffset = start, EndOffset = end, Reference = definition, IsLocal = isLocal, IsLocalTarget = true });
+			if (specialtype != SpecialSegmentType.None) {
+				HighlightedSegments.Add(new HighlightedSegment(specialtype) { StartOffset = start,EndOffset = end });
+			}
 		}
 		
-		public void WriteReference(string text, object reference, bool isLocal)
+		public void WriteReference(string text, object reference, bool isLocal, SpecialSegmentType specialtype = SpecialSegmentType.None)
 		{
 			WriteIndent();
 			int start = this.TextLength;
 			b.Append(text);
 			int end = this.TextLength;
 			references.Add(new ReferenceSegment { StartOffset = start, EndOffset = end, Reference = reference, IsLocal = isLocal });
+			if (specialtype != SpecialSegmentType.None) {
+				HighlightedSegments.Add(new HighlightedSegment(specialtype) { StartOffset = start, EndOffset = end });
+			}
 		}
 		
 		public void MarkFoldStart(string collapsedText, bool defaultCollapsed)
@@ -253,6 +274,11 @@ namespace ICSharpCode.ILSpy.TextView
 		public void AddDebugSymbols(MethodDebugSymbols methodDebugSymbols)
 		{
 			DebuggerMemberMappings.Add(methodDebugSymbols);
+		}
+
+		void ITextOutput.Write(string text)
+		{
+			Write(text);
 		}
 	}
 }

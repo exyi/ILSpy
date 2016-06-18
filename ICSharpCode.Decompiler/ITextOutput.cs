@@ -23,6 +23,11 @@ using Mono.Cecil;
 
 namespace ICSharpCode.Decompiler
 {
+	public enum SpecialSegmentType
+	{
+		None, DocComment, Comment, Keyword, StringLiteral, NumberLiteral
+	}
+
 	public interface ITextOutput
 	{
 		TextLocation Location { get; }
@@ -30,10 +35,11 @@ namespace ICSharpCode.Decompiler
 		void Indent();
 		void Unindent();
 		void Write(char ch);
+		void Write(string text, SpecialSegmentType specialType);
 		void Write(string text);
 		void WriteLine();
-		void WriteDefinition(string text, object definition, bool isLocal = true);
-		void WriteReference(string text, object reference, bool isLocal = false);
+		void WriteDefinition(string text, object definition, bool isLocal = true, SpecialSegmentType type = SpecialSegmentType.None);
+		void WriteReference(string text, object reference, bool isLocal = false, SpecialSegmentType type = SpecialSegmentType.None);
 		
 		void AddDebugSymbols(MethodDebugSymbols methodDebugSymbols);
 		
@@ -48,15 +54,25 @@ namespace ICSharpCode.Decompiler
 			output.Write(string.Format(format, args));
 		}
 		
-		public static void WriteLine(this ITextOutput output, string text)
+		public static void WriteLine(this ITextOutput output, string text, SpecialSegmentType specialType = SpecialSegmentType.None)
 		{
-			output.Write(text);
+			output.Write(text, specialType);
 			output.WriteLine();
 		}
 		
 		public static void WriteLine(this ITextOutput output, string format, params object[] args)
 		{
 			output.WriteLine(string.Format(format, args));
+		}
+
+		public static void WriteLine(this ITextOutput output, string format, SpecialSegmentType specialType, params object[] args)
+		{
+			output.WriteLine(string.Format(format, args), specialType);
+		}
+
+		public static void WriteCommentLine(this ITextOutput output, string comment)
+		{
+			output.WriteLine("// " + comment, SpecialSegmentType.Comment);
 		}
 	}
 }

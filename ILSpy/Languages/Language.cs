@@ -106,7 +106,7 @@ namespace ICSharpCode.ILSpy
 
 		public virtual void WriteCommentLine(ITextOutput output, string comment)
 		{
-			output.WriteLine("// " + comment);
+			output.WriteLine("// " + comment, SpecialSegmentType.Comment);
 		}
 
 		/// <summary>

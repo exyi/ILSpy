@@ -62,7 +62,7 @@ namespace ICSharpCode.ILSpy.VB
 		
 		public override void WriteCommentLine(ITextOutput output, string comment)
 		{
-			output.WriteLine("' " + comment);
+			output.WriteLine("' " + comment, SpecialSegmentType.Comment);
 		}
 		
 		public override void DecompileAssembly(LoadedAssembly assembly, ITextOutput output, DecompilationOptions options)

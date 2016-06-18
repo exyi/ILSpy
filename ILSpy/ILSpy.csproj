@@ -185,6 +185,7 @@
     <Compile Include="TaskHelper.cs" />
     <Compile Include="TextView\EditorCommands.cs" />
     <Compile Include="TextView\FoldingCommands.cs" />
+    <Compile Include="TextView\SemanticCodeHighlighter.cs" />
     <Compile Include="TreeNodes\Analyzer\AnalyzeContextMenuEntry.cs" />
     <Compile Include="TreeNodes\Analyzer\AnalyzedAssemblyTreeNode.cs" />
     <Compile Include="TreeNodes\Analyzer\AnalyzedAttributeAppliedToTreeNode.cs" />

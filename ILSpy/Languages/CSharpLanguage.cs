@@ -290,22 +290,22 @@ namespace ICSharpCode.ILSpy
 				output.WriteLine();
 				ModuleDefinition mainModule = assembly.ModuleDefinition;
 				if (mainModule.Types.Count > 0) {
-					output.Write("// Global type: ");
+					output.Write("// Global type: ", SpecialSegmentType.Comment);
 					output.WriteReference(mainModule.Types[0].FullName, mainModule.Types[0]);
 					output.WriteLine();
 				}
 				if (mainModule.EntryPoint != null) {
-					output.Write("// Entry point: ");
+					output.Write("// Entry point: ", SpecialSegmentType.Comment);
 					output.WriteReference(mainModule.EntryPoint.DeclaringType.FullName + "." + mainModule.EntryPoint.Name, mainModule.EntryPoint);
 					output.WriteLine();
 				}
-				output.WriteLine("// Architecture: " + GetPlatformDisplayName(mainModule));
+				output.WriteCommentLine("Architecture: " + GetPlatformDisplayName(mainModule));
 				if ((mainModule.Attributes & ModuleAttributes.ILOnly) == 0) {
-					output.WriteLine("// This assembly contains unmanaged code.");
+					output.WriteCommentLine("This assembly contains unmanaged code.");
 				}
 				string runtimeName = GetRuntimeDisplayName(mainModule);
 				if (runtimeName != null) {
-					output.WriteLine("// Runtime: " + runtimeName);
+					output.WriteCommentLine("Runtime: " + runtimeName);
 				}
 				output.WriteLine();
 				
