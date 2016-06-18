@@ -36,11 +36,11 @@ namespace ICSharpCode.Decompiler.Ast
 		bool inDocumentationComment = false;
 		bool firstUsingDeclaration;
 		bool lastUsingDeclaration;
-		
+
 		TextLocation? lastEndOfLine;
-		
+
 		public bool FoldBraces = false;
-		
+
 		public TextTokenWriter(ITextOutput output, DecompilerContext context)
 		{
 			if (output == null)
@@ -50,19 +50,19 @@ namespace ICSharpCode.Decompiler.Ast
 			this.output = output;
 			this.context = context;
 		}
-		
+
 		public override void WriteIdentifier(Identifier identifier)
 		{
 			if (identifier.IsVerbatim || CSharpOutputVisitor.IsKeyword(identifier.Name, identifier)) {
 				output.Write('@');
 			}
-			
+
 			var definition = GetCurrentDefinition();
 			if (definition != null) {
 				output.WriteDefinition(identifier.Name, definition, false);
 				return;
 			}
-			
+
 			object memberRef = GetCurrentMemberReference();
 
 			if (memberRef != null) {
@@ -131,8 +131,7 @@ namespace ICSharpCode.Decompiler.Ast
 			}
 
 			var gotoStatement = node as GotoStatement;
-			if (gotoStatement != null)
-			{
+			if (gotoStatement != null) {
 				var method = nodeStack.Select(nd => nd.Annotation<MethodReference>()).FirstOrDefault(mr => mr != null);
 				if (method != null)
 					return method.ToString() + gotoStatement.Label;
@@ -146,7 +145,7 @@ namespace ICSharpCode.Decompiler.Ast
 			AstNode node = nodeStack.Peek();
 			if (node is Identifier && node.Parent != null)
 				node = node.Parent;
-			
+
 			var parameterDef = node.Annotation<ParameterDefinition>();
 			if (parameterDef != null)
 				return parameterDef;
@@ -171,42 +170,58 @@ namespace ICSharpCode.Decompiler.Ast
 
 			return null;
 		}
-		
+
 		object GetCurrentDefinition()
 		{
 			if (nodeStack == null || nodeStack.Count == 0)
 				return null;
-			
+
 			var node = nodeStack.Peek();
 			if (node is Identifier)
 				node = node.Parent;
+			if (node is VariableInitializer && node.Parent is FieldDeclaration)
+				return node.Parent.Annotation<MemberReference>();
 			if (IsDefinition(node))
 				return node.Annotation<MemberReference>();
-			
+
 			return null;
 		}
-		
+
 		public override void WriteKeyword(Role role, string keyword)
 		{
+			if (keyword == "this") {
+				var reference = nodeStack.Peek().Annotation<ILVariable>()?.Type;
+				if (reference != null) {
+					output.WriteReference(keyword, reference, false);
+					return;
+				}
+			}
+			if (keyword == "base" && nodeStack.Peek() is BaseReferenceExpression) {
+				var typeReference = nodeStack.Peek().Annotation<TypeReference>();
+				if (typeReference != null) {
+					output.WriteReference(keyword, typeReference, false);
+					return;
+				}
+			}
 			output.Write(keyword);
 		}
-		
+
 		public override void WriteToken(Role role, string token)
 		{
 			// Attach member reference to token only if there's no identifier in the current node.
 			MemberReference memberRef = GetCurrentMemberReference();
 			var node = nodeStack.Peek();
-			if (memberRef != null && node.GetChildByRole(Roles.Identifier).IsNull)
+			if (memberRef != null && node.GetChildByRole(Roles.Identifier).IsNull && !(node is FieldDeclaration))
 				output.WriteReference(token, memberRef);
 			else
 				output.Write(token);
 		}
-		
+
 		public override void Space()
 		{
 			output.Write(' ');
 		}
-		
+
 		public void OpenBrace(BraceStyle style)
 		{
 			if (braceLevelWithinType >= 0 || nodeStack.Peek() is TypeDeclaration)
@@ -218,7 +233,7 @@ namespace ICSharpCode.Decompiler.Ast
 			output.WriteLine("{");
 			output.Indent();
 		}
-		
+
 		public void CloseBrace(BraceStyle style)
 		{
 			output.Unindent();
@@ -228,17 +243,17 @@ namespace ICSharpCode.Decompiler.Ast
 			if (braceLevelWithinType >= 0)
 				braceLevelWithinType--;
 		}
-		
+
 		public override void Indent()
 		{
 			output.Indent();
 		}
-		
+
 		public override void Unindent()
 		{
 			output.Unindent();
 		}
-		
+
 		public override void NewLine()
 		{
 			if (lastUsingDeclaration) {
@@ -248,7 +263,7 @@ namespace ICSharpCode.Decompiler.Ast
 			lastEndOfLine = output.Location;
 			output.WriteLine();
 		}
-		
+
 		public override void WriteComment(CommentType commentType, string content)
 		{
 			switch (commentType) {
@@ -280,7 +295,7 @@ namespace ICSharpCode.Decompiler.Ast
 					break;
 			}
 		}
-		
+
 		public override void WritePreProcessorDirective(PreProcessorDirectiveType type, string argument)
 		{
 			// pre-processor directive must start on its own line
@@ -292,12 +307,12 @@ namespace ICSharpCode.Decompiler.Ast
 			}
 			output.WriteLine();
 		}
-		
+
 		public override void WritePrimitiveValue(object value, string literalValue = null)
 		{
 			new TextWriterTokenWriter(new TextOutputWriter(output)).WritePrimitiveValue(value, literalValue);
 		}
-		
+
 		public override void WritePrimitiveType(string type)
 		{
 			output.Write(type);
@@ -305,10 +320,10 @@ namespace ICSharpCode.Decompiler.Ast
 				output.Write("()");
 			}
 		}
-		
+
 		Stack<TextLocation> startLocations = new Stack<TextLocation>();
 		Stack<MethodDebugSymbols> symbolsStack = new Stack<MethodDebugSymbols>();
-		
+
 		public override void StartNode(AstNode node)
 		{
 			if (nodeStack.Count == 0) {
@@ -322,7 +337,7 @@ namespace ICSharpCode.Decompiler.Ast
 			}
 			nodeStack.Push(node);
 			startLocations.Push(output.Location);
-			
+
 			if (node is EntityDeclaration && node.Annotation<MemberReference>() != null && node.GetChildByRole(Roles.Identifier).IsNull)
 				output.WriteDefinition("", node.Annotation<MemberReference>(), false);
 
@@ -331,7 +346,7 @@ namespace ICSharpCode.Decompiler.Ast
 				symbolsStack.Peek().StartLocation = startLocations.Peek();
 			}
 		}
-		
+
 		private bool IsUsingDeclaration(AstNode node)
 		{
 			return node is UsingDeclaration || node is UsingAliasDeclaration;
@@ -341,28 +356,29 @@ namespace ICSharpCode.Decompiler.Ast
 		{
 			if (nodeStack.Pop() != node)
 				throw new InvalidOperationException();
-			
+
 			var startLocation = startLocations.Pop();
-			
+
 			// code mappings
 			var ranges = node.Annotation<List<ILRange>>();
 			if (symbolsStack.Count > 0 && ranges != null && ranges.Count > 0) {
 				// Ignore the newline which was printed at the end of the statement
 				TextLocation endLocation = (node is Statement) ? (lastEndOfLine ?? output.Location) : output.Location;
 				symbolsStack.Peek().SequencePoints.Add(
-					new SequencePoint() {
+					new SequencePoint()
+					{
 						ILRanges = ILRange.OrderAndJoin(ranges).ToArray(),
 						StartLocation = startLocation,
 						EndLocation = endLocation
 					});
 			}
-			
+
 			if (node.Annotation<MethodDebugSymbols>() != null) {
 				symbolsStack.Peek().EndLocation = output.Location;
 				output.AddDebugSymbols(symbolsStack.Pop());
 			}
 		}
-		
+
 		private static bool IsDefinition(AstNode node)
 		{
 			return node is EntityDeclaration

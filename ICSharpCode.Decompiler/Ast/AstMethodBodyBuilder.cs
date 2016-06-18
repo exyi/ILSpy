@@ -663,7 +663,7 @@ namespace ICSharpCode.Decompiler.Ast
 							localVariablesToDefine.Add((ILVariable)operand);
 						Expression expr;
 						if (v.IsParameter && v.OriginalParameter.Index < 0)
-							expr = new ThisReferenceExpression();
+							expr = new ThisReferenceExpression().WithAnnotation(operand);
 						else
 							expr = new Ast.IdentifierExpression(((ILVariable)operand).Name).WithAnnotation(operand);
 						return v.IsParameter && v.Type is ByReferenceType ? MakeRef(expr) : expr;
@@ -973,7 +973,7 @@ namespace ICSharpCode.Decompiler.Ast
 				// a non-virtual call on "this" might be a "base"-call.
 				if (cecilMethod.DeclaringType.GetElementType() != methodDef.DeclaringType) {
 					// If we're not calling a method in the current class; we must be calling one in the base class.
-					target = new BaseReferenceExpression();
+					target = new BaseReferenceExpression().WithAnnotation(cecilMethod.DeclaringType);
 				}
 			}
 			
