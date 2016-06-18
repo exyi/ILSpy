@@ -13,7 +13,7 @@
 	FocusManager.FocusedElement="{Binding ElementName=treeView}"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" d:DesignHeight="500" d:DesignWidth="500"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d"
->
+	Background="#2D2D30">
 	<Window.Resources>
 		<BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 	</Window.Resources>
@@ -44,8 +44,9 @@
 	</Window.TaskbarItemInfo>
 	<DockPanel>
 		<!-- Main menu -->
-		<Menu DockPanel.Dock="Top" Name="mainMenu" Height="23">
-			<MenuItem Header="_File" /> <!-- contents of file menu are added using MEF -->
+		<Menu DockPanel.Dock="Top" Name="mainMenu" Height="23" Background="#2D2D30" Foreground="#dcdcdc">
+			<MenuItem Header="_File" Background="#2D2D30" />
+			<!-- contents of file menu are added using MEF -->
 			<MenuItem Header="_View">
 				<MenuItem Header="Show _internal types and members" IsCheckable="True" IsChecked="{Binding FilterSettings.ShowInternalApi}">
 					<MenuItem.Icon>
@@ -56,6 +57,7 @@
 		</Menu>
 		<!-- ToolBar -->
 		<ToolBar
+			Background="#2D2D30"
 			Name="toolBar"
 			DockPanel.Dock="Top" ToolBarTray.IsLocked="True">
 			<ToolBar.Resources>
@@ -80,7 +82,10 @@
 			<Separator />
 			<ComboBox Name="languageComboBox" DisplayMemberPath="Name" Width="100"
 			          ItemsSource="{x:Static local:Languages.AllLanguages}"
-			          SelectedItem="{Binding FilterSettings.Language}"/>
+			          SelectedItem="{Binding FilterSettings.Language}"
+					  Background="#2D2D30"
+					  Foreground="#dcdcdc"
+					  BorderBrush="#787878"/>
 		</ToolBar>
 		<!-- Status bar -->
 		<StatusBar x:Name="statusBar" DockPanel.Dock="Bottom" Height="26" Visibility="Collapsed">
@@ -117,7 +122,9 @@
 				ShowRoot="False"
 				AllowDropOrder="True"
 				AllowDrop="True"
-				BorderThickness="0,1,1,1" Visibility="Visible" />
+				BorderThickness="0,1,1,1" Visibility="Visible"
+				Background="#1e1e1e"
+				Foreground="#dcdcdc"/>
 			<GridSplitter
 				Grid.ZIndex="1"
 				Grid.Column="1"
@@ -126,7 +133,7 @@
 				HorizontalAlignment="Center"
 				VerticalAlignment="Stretch"
 				Focusable="False"
-				BorderBrush="Transparent" />
+				BorderBrush="Transparent"/>
 			<!-- Right pane: Text Editor -->
 			<Grid Grid.Column="2">
 				<Grid.ColumnDefinitions>
@@ -150,11 +157,11 @@
 						</StackPanel>
 					</DockPanel>
 				</Border>
-				
+
 				<controls:DockedPane x:Name="topPane" Grid.Row="1" Title="Top" Visibility="Collapsed"
 					CloseButtonClicked="TopPane_CloseButtonClicked" Margin="0,0,0,3"
 					BorderThickness="1,1,0,1" />
-				
+
 				<GridSplitter
 					Grid.ZIndex="1"
 					Grid.Row="2"
@@ -165,10 +172,10 @@
 					VerticalAlignment="Center"
 					Focusable="False"
 					Visibility="{Binding Visibility, ElementName=topPane}" />
-				
+
 				<!-- decompilerTextView is into the mainPane by code -->
 				<ContentPresenter Name="mainPane" Grid.Row="3"/>
-				
+
 				<GridSplitter
 					Grid.ZIndex="1"
 					Grid.Row="4"
@@ -179,7 +186,7 @@
 					VerticalAlignment="Center"
 					Focusable="False"
 					Visibility="{Binding Visibility, ElementName=bottomPane}" />
-				
+
 				<controls:DockedPane x:Name="bottomPane" Grid.Row="5" Title="Bottom" Visibility="Collapsed"
 					CloseButtonClicked="BottomPane_CloseButtonClicked" Margin="0,3,0,0" BorderThickness="1,1,0,1"/>
 			</Grid>

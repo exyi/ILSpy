@@ -162,6 +162,8 @@ namespace ICSharpCode.ILSpy
 				foreach (var category in topLevelMenu.GroupBy(c => c.Metadata.MenuCategory)) {
 					if (topLevelMenuItem == null) {
 						topLevelMenuItem = new MenuItem();
+						topLevelMenuItem.Background = mainMenu.Background;
+						topLevelMenuItem.BorderBrush = mainMenu.Background;
 						topLevelMenuItem.Header = topLevelMenu.Key;
 						mainMenu.Items.Add(topLevelMenuItem);
 					} else if (topLevelMenuItem.Items.Count > 0) {

@@ -87,6 +87,16 @@ namespace ICSharpCode.ILSpy.TextView
 					}
 				});
 
+			HighlightingManager.Instance.RegisterHighlighting(
+				"CSharp", new string[] { ".cs" },
+				delegate {
+					using (Stream s = typeof(DecompilerTextView).Assembly.GetManifestResourceStream(typeof(DecompilerTextView), "CSharp-Mode.xshd")) {
+						using (XmlTextReader reader = new XmlTextReader(s)) {
+							return HighlightingLoader.Load(reader, HighlightingManager.Instance);
+						}
+					}
+				});
+
 			InitializeComponent();
 
 			this.referenceElementGenerator = new ReferenceElementGenerator(this.JumpToReference, this.IsLink);

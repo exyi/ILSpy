@@ -72,6 +72,7 @@ namespace ICSharpCode.ILSpy
 					CheckBox checkBox = new CheckBox();
 					checkBox.Margin = new Thickness(4);
 					checkBox.Content = "Automatically check for updates every week";
+					checkBox.Foreground = textView.Foreground;
 					UpdateSettings settings = new UpdateSettings(ILSpySettings.Load());
 					checkBox.SetBinding(CheckBox.IsCheckedProperty, new Binding("AutomaticUpdateCheckEnabled") { Source = settings });
 					return new StackPanel {

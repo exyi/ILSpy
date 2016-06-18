@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Windows.Media;
 using ICSharpCode.TreeView;
 
 namespace ICSharpCode.ILSpy.TreeNodes.Analyzer
@@ -40,6 +41,8 @@ namespace ICSharpCode.ILSpy.TreeNodes.Analyzer
 				}
 			}
 		}
+
+		public override Brush Foreground => new SolidColorBrush(Color.FromRgb(220, 220, 220));
 
 		public override bool CanDelete()
 		{

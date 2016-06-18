@@ -36,8 +36,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 		public FilterSettings FilterSettings
 		{
 			get { return filterSettings; }
-			set
-			{
+			set {
 				if (filterSettings != value) {
 					filterSettings = value;
 					OnFilterSettingsChanged();
@@ -166,8 +165,9 @@ namespace ICSharpCode.ILSpy.TreeNodes
 					ApplyFilterToChild(node);
 			}
 		}
-		
-		public virtual bool IsPublicAPI {
+
+		public virtual bool IsPublicAPI
+		{
 			get { return true; }
 		}
 
@@ -175,18 +175,18 @@ namespace ICSharpCode.ILSpy.TreeNodes
 		{
 			get { return false; }
 		}
-		
-		public override System.Windows.Media.Brush Foreground {
+
+		public override System.Windows.Media.Brush Foreground
+		{
 			get {
+				return new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 220, 220));
 				if (IsPublicAPI)
 					if (IsAutoLoaded) {
 						// HACK: should not be hard coded?
 						return System.Windows.Media.Brushes.SteelBlue;
-					}
-					else {
+					} else {
 						return base.Foreground;
-					}
-				else
+					} else
 					return System.Windows.SystemColors.GrayTextBrush;
 			}
 		}
