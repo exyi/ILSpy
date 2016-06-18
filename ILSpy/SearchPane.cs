@@ -44,8 +44,9 @@ namespace ICSharpCode.ILSpy
 	{
 		static SearchPane instance;
 		RunningSearch currentSearch;
-		
-		public static SearchPane Instance {
+
+		public static SearchPane Instance
+		{
 			get {
 				if (instance == null) {
 					App.Current.VerifyAccess();
@@ -54,7 +55,7 @@ namespace ICSharpCode.ILSpy
 				return instance;
 			}
 		}
-		
+
 		private SearchPane()
 		{
 			InitializeComponent();
@@ -68,12 +69,12 @@ namespace ICSharpCode.ILSpy
 			searchModeComboBox.Items.Add(new { Image = Images.Literal, Name = "Constant" });
 			searchModeComboBox.SelectedIndex = (int)SearchMode.TypeAndMember;
 			ContextMenuProvider.Add(listBox);
-			
+
 			MainWindow.Instance.CurrentAssemblyListChanged += MainWindow_Instance_CurrentAssemblyListChanged;
 		}
-		
+
 		bool runSearchOnNextShow;
-		
+
 		void MainWindow_Instance_CurrentAssemblyListChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
 			if (IsVisible) {
@@ -83,7 +84,7 @@ namespace ICSharpCode.ILSpy
 				runSearchOnNextShow = true;
 			}
 		}
-		
+
 		public void Show()
 		{
 			if (!IsVisible) {
@@ -101,26 +102,27 @@ namespace ICSharpCode.ILSpy
 						searchBox.SelectAll();
 					}));
 		}
-		
+
 		public static readonly DependencyProperty SearchTermProperty =
 			DependencyProperty.Register("SearchTerm", typeof(string), typeof(SearchPane),
-			                            new FrameworkPropertyMetadata(string.Empty, OnSearchTermChanged));
-		
-		public string SearchTerm {
+										new FrameworkPropertyMetadata(string.Empty, OnSearchTermChanged));
+
+		public string SearchTerm
+		{
 			get { return (string)GetValue(SearchTermProperty); }
 			set { SetValue(SearchTermProperty, value); }
 		}
-		
+
 		static void OnSearchTermChanged(DependencyObject o, DependencyPropertyChangedEventArgs e)
 		{
 			((SearchPane)o).StartSearch((string)e.NewValue);
 		}
-		
+
 		void SearchModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{
 			StartSearch(this.SearchTerm);
 		}
-		
+
 		void StartSearch(string searchTerm)
 		{
 			if (currentSearch != null) {
@@ -136,18 +138,18 @@ namespace ICSharpCode.ILSpy
 				new Thread(currentSearch.Run).Start();
 			}
 		}
-		
+
 		void IPane.Closed()
 		{
 			this.SearchTerm = string.Empty;
 		}
-		
+
 		void ListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
 		{
 			JumpToSelectedItem();
 			e.Handled = true;
 		}
-		
+
 		void ListBox_KeyDown(object sender, KeyEventArgs e)
 		{
 			if (e.Key == Key.Return) {
@@ -155,7 +157,7 @@ namespace ICSharpCode.ILSpy
 				JumpToSelectedItem();
 			}
 		}
-		
+
 		void JumpToSelectedItem()
 		{
 			SearchResult result = listBox.SelectedItem as SearchResult;
@@ -163,7 +165,7 @@ namespace ICSharpCode.ILSpy
 				MainWindow.Instance.JumpToReference(result.Member);
 			}
 		}
-		
+
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			base.OnKeyDown(e);
@@ -178,7 +180,7 @@ namespace ICSharpCode.ILSpy
 				e.Handled = true;
 			}
 		}
-		
+
 		void SearchBox_PreviewKeyDown(object sender, KeyEventArgs e)
 		{
 			if (e.Key == Key.Down && listBox.HasItems) {
@@ -203,18 +205,18 @@ namespace ICSharpCode.ILSpy
 			{
 				this.dispatcher = Dispatcher.CurrentDispatcher;
 				this.assemblies = assemblies;
-				this.searchTerm = searchTerm.Split(new char[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+				this.searchTerm = searchTerm.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 				this.language = language;
 				this.searchMode = searchMode;
-				
+
 				this.Results.Add(new SearchResult { Name = "Searching..." });
 			}
-			
+
 			public void Cancel()
 			{
 				cts.Cancel();
 			}
-			
+
 			public void Run()
 			{
 				try {
@@ -238,7 +240,7 @@ namespace ICSharpCode.ILSpy
 					DispatcherPriority.Normal,
 					new Action(delegate { this.Results.RemoveAt(this.Results.Count - 1); }));
 			}
-			
+
 			void AddResult(SearchResult result)
 			{
 				if (++resultCount == 1000) {
@@ -247,7 +249,11 @@ namespace ICSharpCode.ILSpy
 				}
 				dispatcher.BeginInvoke(
 					DispatcherPriority.Normal,
-					new Action(delegate { this.Results.Insert(this.Results.Count - 1, result); }));
+					new Action(delegate {
+						var index = Results.IndexOf(Results.FirstOrDefault(r => r.Name.Length > result.Name.Length));
+						if (index < 0) index = this.Results.Count - 1;
+						this.Results.Insert(index, result);
+					}));
 				cts.Token.ThrowIfCancellationRequested();
 			}
 
@@ -279,8 +285,7 @@ namespace ICSharpCode.ILSpy
 						return new LiteralSearchStrategy(terms[0].Substring(2));
 				}
 
-				switch (mode)
-				{
+				switch (mode) {
 					case SearchMode.TypeAndMember:
 						return new TypeAndMemberSearchStrategy(terms);
 					case SearchMode.Type:
@@ -306,18 +311,19 @@ namespace ICSharpCode.ILSpy
 
 	sealed class SearchResult : INotifyPropertyChanged, IMemberTreeNode
 	{
-		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged {
+		event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
+		{
 			add { }
 			remove { }
 		}
-			
+
 		public MemberReference Member { get; set; }
-			
+
 		public string Location { get; set; }
 		public string Name { get; set; }
 		public ImageSource Image { get; set; }
 		public ImageSource LocationImage { get; set; }
-			
+
 		public override string ToString()
 		{
 			return Name;
