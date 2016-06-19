@@ -215,6 +215,8 @@ namespace ICSharpCode.Decompiler.Ast
 
 		public override void WriteToken(Role role, string token)
 		{
+			if (token == "{") output.MarkFoldStart("{ ... }");
+
 			// Attach member reference to token only if there's no identifier in the current node.
 			MemberReference memberRef = GetCurrentMemberReference();
 			var node = nodeStack.Peek();
@@ -222,33 +224,13 @@ namespace ICSharpCode.Decompiler.Ast
 				output.WriteReference(token, memberRef);
 			else
 				output.Write(token);
+
+			if (token == "}") output.MarkFoldEnd();
 		}
 
 		public override void Space()
 		{
 			output.Write(' ');
-		}
-
-		public void OpenBrace(BraceStyle style)
-		{
-			if (braceLevelWithinType >= 0 || nodeStack.Peek() is TypeDeclaration)
-				braceLevelWithinType++;
-			if (nodeStack.OfType<BlockStatement>().Count() <= 1 || FoldBraces) {
-				output.MarkFoldStart(defaultCollapsed: braceLevelWithinType == 1);
-			}
-			output.WriteLine();
-			output.WriteLine("{");
-			output.Indent();
-		}
-
-		public void CloseBrace(BraceStyle style)
-		{
-			output.Unindent();
-			output.Write('}');
-			if (nodeStack.OfType<BlockStatement>().Count() <= 1 || FoldBraces)
-				output.MarkFoldEnd();
-			if (braceLevelWithinType >= 0)
-				braceLevelWithinType--;
 		}
 
 		public override void Indent()

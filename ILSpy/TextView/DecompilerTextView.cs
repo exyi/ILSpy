@@ -882,7 +882,7 @@ namespace ICSharpCode.ILSpy.TextView
 
 			public bool CanInsert(int offset)
 			{
-				return decompilerTextView.references.FindSegmentsContaining(decompilerTextView.textEditor.CaretOffset).Count == 1;
+				return decompilerTextView.references?.FindSegmentsContaining(decompilerTextView.textEditor.CaretOffset)?.Count == 1;
 			}
 
 			public IEnumerable<ISegment> GetDeletableSegments(ISegment segment)
