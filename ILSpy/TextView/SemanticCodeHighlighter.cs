@@ -83,8 +83,10 @@ namespace ICSharpCode.ILSpy.TextView
 			Brush brush = null;
 			if (reference.Reference is TypeReference) {
 				var typeDefinition = ((TypeReference)reference.Reference).Resolve();
-				if (typeDefinition.IsInterface || typeDefinition.IsEnum) brush = InterfaceReferenceColor;
-				else brush = ClassReferenceColor;
+				if (typeDefinition != null) {
+					if (typeDefinition.IsInterface || typeDefinition.IsEnum) brush = InterfaceReferenceColor;
+					else brush = ClassReferenceColor;
+				}
 			}
 
 			if (bold || brush != null) ChangeLinePart(reference.StartOffset, reference.EndOffset, vle => SetElementColor(vle, brush, bold));
