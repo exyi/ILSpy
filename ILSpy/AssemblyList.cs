@@ -143,7 +143,7 @@ namespace ICSharpCode.ILSpy
 		/// Opens an assembly from disk.
 		/// Returns the existing assembly node if it is already loaded.
 		/// </summary>
-		public LoadedAssembly OpenAssembly(string file, bool isAutoLoaded=false)
+		public LoadedAssembly OpenAssembly(string file, bool isAutoLoaded=false, bool addEvenIfBad = true)
 		{
 			App.Current.Dispatcher.VerifyAccess();
 			
@@ -156,6 +156,12 @@ namespace ICSharpCode.ILSpy
 			
 			var newAsm = new LoadedAssembly(this, file);
 			newAsm.IsAutoLoaded = isAutoLoaded;
+			if (!addEvenIfBad) {
+				try {
+					newAsm.WaitUntilLoaded();
+				} catch { return newAsm; }
+			}
+
 			lock (assemblies) {
 				this.assemblies.Add(newAsm);
 			}
