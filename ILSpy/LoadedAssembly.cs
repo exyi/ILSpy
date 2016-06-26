@@ -313,6 +313,5 @@ namespace ICSharpCode.ILSpy
 		{
 			assemblyTask.Wait();
 		}
-
 	}
 }

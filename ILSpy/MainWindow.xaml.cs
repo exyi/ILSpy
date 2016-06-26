@@ -668,7 +668,7 @@ namespace ICSharpCode.ILSpy
 			}
 		}
 
-		public void OpenFiles(string[] fileNames, bool focusNode = true)
+		public void OpenFiles(string[] fileNames, bool focusNode = true, bool removeUnloadable = false)
 		{
 			if (fileNames == null)
 				throw new ArgumentNullException("fileNames");
@@ -677,9 +677,11 @@ namespace ICSharpCode.ILSpy
 				treeView.UnselectAll();
 
 			SharpTreeNode lastNode = null;
+			//var loadedAssemblies = new List<LoadedAssembly>();
 			foreach (string file in fileNames) {
-				var asm = assemblyList.OpenAssembly(file);
+				var asm = assemblyList.OpenAssembly(file, addEvenIfBad: !removeUnloadable);
 				if (asm != null) {
+					//loadedAssemblies.Add(asm);
 					var node = assemblyListTreeNode.FindAssemblyNode(asm);
 					if (node != null && focusNode) {
 						treeView.SelectedItems.Add(node);
@@ -688,6 +690,32 @@ namespace ICSharpCode.ILSpy
 				}
 				if (lastNode != null && focusNode)
 					treeView.FocusNode(lastNode);
+			}
+			//if (removeUnloadable) {
+			//	var badAssemblies = new List<LoadedAssembly>();
+			//	foreach (var aa in loadedAssemblies) {
+			//		try {
+			//			aa.WaitUntilLoaded();
+			//		} catch { }
+			//		if (aa.HasLoadError) {
+			//			badAssemblies.Add(aa);
+			//		}
+			//	}
+			//	lock (assemblyList.assemblies)
+			//		assemblyList.assemblies.(aa);
+			//}
+		}
+
+		public void RemoveCurruptedAssemblies()
+		{
+			foreach (var aa in assemblyList.assemblies.ToArray()) {
+				try {
+					aa.WaitUntilLoaded();
+				} catch { }
+				if (aa.HasLoadError) {
+					lock (assemblyList.assemblies)
+						assemblyList.assemblies.Remove(aa);
+				}
 			}
 		}
 
