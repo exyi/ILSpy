@@ -56,7 +56,7 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 		/// </summary>
 		public IImmutableSet<string> RequiredNamespacesSuperset => DecompileRun.Namespaces.ToImmutableHashSet();
 
-		internal TransformContext(IDecompilerTypeSystem typeSystem, DecompileRun decompileRun, ITypeResolveContext decompilationContext, TypeSystemAstBuilder typeSystemAstBuilder)
+		public TransformContext(IDecompilerTypeSystem typeSystem, DecompileRun decompileRun, ITypeResolveContext decompilationContext, TypeSystemAstBuilder typeSystemAstBuilder)
 		{
 			this.TypeSystem = typeSystem;
 			this.DecompileRun = decompileRun;

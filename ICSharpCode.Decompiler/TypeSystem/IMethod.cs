@@ -81,4 +81,10 @@ namespace ICSharpCode.Decompiler.TypeSystem
 		/// </summary>
 		new IMethod Specialize(TypeParameterSubstitution substitution);
 	}
+
+	public interface IMethodWithDefinition
+	{
+		bool HasFlag(System.Reflection.MethodAttributes attributes);
+        IL.ILFunction GetBody();
+	}
 }

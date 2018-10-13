@@ -41,8 +41,15 @@ namespace ICSharpCode.Decompiler
 		public MethodDefinitionHandle DecompiledMethod { get; }
 		public Metadata.PEFile Module { get; }
 
+		public DecompilerException(IMethod method, Exception innerException)
+			: base($"Error decompiling {method.ReflectionName}\n", innerException)
+		{
+			this.Module = method.ParentModule?.PEFile;
+			this.DecompiledMethod = method.MetadataToken.IsNil ? default : (MethodDefinitionHandle)method.MetadataToken;
+		}
+
 		public DecompilerException(Metadata.PEFile module, MethodDefinitionHandle decompiledMethod, Exception innerException) 
-			: base("Error decompiling " + GetFullName(decompiledMethod, module.Metadata) + Environment.NewLine, innerException)
+			: base("Error decompiling " + GetFullName(decompiledMethod, module?.Metadata) + Environment.NewLine, innerException)
 		{
 			this.Module = module;
 			this.DecompiledMethod = decompiledMethod;
@@ -50,8 +57,8 @@ namespace ICSharpCode.Decompiler
 
 		private static string GetFullName(MethodDefinitionHandle decompiledMethod, MetadataReader metadata)
 		{
-			var method = metadata.GetMethodDefinition(decompiledMethod);
-			return $"{method.GetDeclaringType().GetFullTypeName(metadata).ToString()}.{metadata.GetString(method.Name)}";
+			var method = metadata?.GetMethodDefinition(decompiledMethod);
+			return $"{method?.GetDeclaringType().GetFullTypeName(metadata).ToString()}.{metadata?.GetString(method.Value.Name)}";
 		}
 
 		// This constructor is needed for serialization.

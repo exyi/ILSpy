@@ -24,7 +24,7 @@ using ICSharpCode.Decompiler.Semantics;
 
 namespace ICSharpCode.Decompiler.CSharp.Transforms
 {
-	sealed class TypePattern : Pattern
+	public sealed class TypePattern : Pattern
 	{
 		readonly string ns;
 		readonly string name;

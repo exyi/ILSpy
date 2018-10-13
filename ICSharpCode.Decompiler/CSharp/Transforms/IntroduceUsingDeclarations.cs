@@ -138,7 +138,7 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 
 				CSharpTypeResolveContext currentContext;
 				if (ignoreUsingScope) {
-					currentContext = new CSharpTypeResolveContext(context.TypeSystem.MainModule);
+					currentContext = new CSharpTypeResolveContext(((ICompilation)context.TypeSystem).MainModule);
 				} else {
 					this.context = new Stack<CSharpTypeResolveContext>();
 					if (!string.IsNullOrEmpty(context.CurrentTypeDefinition?.Namespace)) {
@@ -146,7 +146,7 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 							usingScope = new UsingScope(usingScope, ns);
 						}
 					}
-					currentContext = new CSharpTypeResolveContext(context.TypeSystem.MainModule, usingScope.Resolve(context.TypeSystem), context.CurrentTypeDefinition);
+					currentContext = new CSharpTypeResolveContext(((ICompilation)context.TypeSystem).MainModule, usingScope.Resolve(context.TypeSystem), context.CurrentTypeDefinition);
 					this.context.Push(currentContext);
 				}
 				this.astBuilder = CreateAstBuilder(currentContext);

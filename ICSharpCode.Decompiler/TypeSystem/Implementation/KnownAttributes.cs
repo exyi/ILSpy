@@ -91,7 +91,7 @@ namespace ICSharpCode.Decompiler.TypeSystem
 		PermissionSet,
 	}
 
-	static class KnownAttributes
+	public static class KnownAttributes
 	{
 		internal const int Count = (int)KnownAttribute.PermissionSet + 1;
 

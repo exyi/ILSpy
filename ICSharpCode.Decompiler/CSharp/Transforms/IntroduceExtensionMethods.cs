@@ -56,7 +56,7 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 					usingScope = new UsingScope(usingScope, ns);
 				}
 			}
-			var currentContext = new CSharpTypeResolveContext(context.TypeSystem.MainModule, usingScope.Resolve(context.TypeSystem), context.CurrentTypeDefinition);
+			var currentContext = new CSharpTypeResolveContext(((ICompilation)context.TypeSystem).MainModule, usingScope.Resolve(context.TypeSystem), context.CurrentTypeDefinition);
 			this.resolveContextStack.Push(currentContext);
 			this.resolver = new CSharpResolver(currentContext);
 		}

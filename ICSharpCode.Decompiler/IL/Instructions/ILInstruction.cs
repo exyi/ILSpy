@@ -25,7 +25,7 @@ using ICSharpCode.Decompiler.Util;
 
 namespace ICSharpCode.Decompiler.IL
 {
-	internal enum ILPhase
+	public enum ILPhase
 	{
 		/// <summary>
 		/// Reading the individual instructions.
@@ -64,6 +64,7 @@ namespace ICSharpCode.Decompiler.IL
 			// If a call to ReplaceWith() triggers the "ILAst must form a tree" assertion,
 			// make sure to read the remarks on the ReplaceWith() method.
 		}
+		public void CheckInvariantPublic(ILPhase phase) => CheckInvariant(phase);
 		
 		[Conditional("DEBUG")]
 		internal virtual void CheckInvariant(ILPhase phase)
@@ -486,14 +487,14 @@ namespace ICSharpCode.Decompiler.IL
 		/// </summary>
 		byte refCount;
 		
-		internal void AddRef()
+		public void AddRef()
 		{
 			if (refCount++ == 0) {
 				Connected();
 			}
 		}
 		
-		internal void ReleaseRef()
+		public void ReleaseRef()
 		{
 			Debug.Assert(refCount > 0);
 			if (--refCount == 0) {

@@ -31,7 +31,7 @@ using ICSharpCode.Decompiler.CSharp.Syntax.PatternMatching;
 
 namespace ICSharpCode.Decompiler.CSharp
 {
-	class StatementBuilder : ILVisitor<Statement>
+	public class StatementBuilder : ILVisitor<Statement>
 	{
 		internal readonly ExpressionBuilder exprBuilder;
 		readonly ILFunction currentFunction;

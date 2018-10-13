@@ -17,6 +17,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace ICSharpCode.Decompiler.TypeSystem
@@ -47,6 +48,8 @@ namespace ICSharpCode.Decompiler.TypeSystem
 		/// </param>
 		public TypeParameterSubstitution(IReadOnlyList<IType> classTypeArguments, IReadOnlyList<IType> methodTypeArguments)
 		{
+			Debug.Assert(classTypeArguments == null || classTypeArguments.Count > 0);
+			Debug.Assert(methodTypeArguments == null || methodTypeArguments.Count > 0);
 			this.classTypeArguments = classTypeArguments;
 			this.methodTypeArguments = methodTypeArguments;
 		}

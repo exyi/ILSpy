@@ -47,9 +47,9 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 		public DecompilerSettings Settings { get; }
 		public CancellationToken CancellationToken { get; set; }
 		public Stepper Stepper { get; set; }
-		public Metadata.PEFile PEFile => TypeSystem.MainModule.PEFile;
+		public Metadata.PEFile PEFile => ((ICompilation)TypeSystem).MainModule.PEFile;
 
-		internal DecompileRun DecompileRun { get; set; }
+		public DecompileRun DecompileRun { get; set; }
 		internal ResolvedUsingScope UsingScope => DecompileRun.UsingScope.Resolve(TypeSystem);
 
 		public ILTransformContext(ILFunction function, IDecompilerTypeSystem typeSystem, IDebugInfoProvider debugInfo, DecompilerSettings settings = null)

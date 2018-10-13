@@ -8,7 +8,7 @@ using ICSharpCode.Decompiler.TypeSystem;
 
 namespace ICSharpCode.Decompiler
 {
-	internal class DecompileRun
+	public class DecompileRun
 	{
 		public HashSet<string> DefinedSymbols { get; private set; } = new HashSet<string>();
 		public HashSet<string> Namespaces { get; private set; } = new HashSet<string>();

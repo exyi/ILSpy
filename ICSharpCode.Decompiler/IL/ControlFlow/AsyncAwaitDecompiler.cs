@@ -31,7 +31,7 @@ namespace ICSharpCode.Decompiler.IL.ControlFlow
 	/// <summary>
 	/// Decompiler step for C# 5 async/await.
 	/// </summary>
-	class AsyncAwaitDecompiler : IILTransform
+	public class AsyncAwaitDecompiler : IILTransform
 	{
 		public static bool IsCompilerGeneratedStateMachine(TypeDefinitionHandle type, MetadataReader metadata)
 		{

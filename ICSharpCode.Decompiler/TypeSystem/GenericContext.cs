@@ -45,7 +45,7 @@ namespace ICSharpCode.Decompiler.TypeSystem
 			this.MethodTypeParameters = (context.CurrentMember as IMethod)?.TypeParameters;
 		}
 
-		internal GenericContext(IEntity context)
+		public GenericContext(IEntity context)
 		{
 			if (context is ITypeDefinition td) {
 				this.ClassTypeParameters = td.TypeParameters;
