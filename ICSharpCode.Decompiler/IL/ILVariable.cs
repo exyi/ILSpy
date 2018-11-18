@@ -381,12 +381,12 @@ namespace ICSharpCode.Decompiler.IL
 		int IndexInStoreInstructionList { get; set; }
 	}
 
-	interface ILoadInstruction : IInstructionWithVariableOperand
+	public interface ILoadInstruction : IInstructionWithVariableOperand
 	{
 		int IndexInLoadInstructionList { get; set; }
 	}
 
-	interface IAddressInstruction : IInstructionWithVariableOperand
+	public interface IAddressInstruction : IInstructionWithVariableOperand
 	{
 		int IndexInAddressInstructionList { get; set; }
 	}

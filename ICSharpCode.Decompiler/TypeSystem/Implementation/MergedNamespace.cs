@@ -126,7 +126,9 @@ namespace ICSharpCode.Decompiler.TypeSystem.Implementation
 				foreach (var g in namespaces.SelectMany(ns => ns.ChildNamespaces).GroupBy(ns => ns.Name, compilation.NameComparer)) {
 					result.Add(g.Key, new MergedNamespace(this, g.ToArray()));
 				}
-				return LazyInit.GetOrSet(ref this.childNamespaces, result);
+				// TODO(exyi): add the cache back
+				// return LazyInit.GetOrSet(ref this.childNamespaces, result);
+				return result;
 			}
 		}
 		
