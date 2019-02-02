@@ -27,7 +27,7 @@ using ICSharpCode.Decompiler.Util;
 
 namespace ICSharpCode.Decompiler.CSharp.Resolver
 {
-	sealed class CSharpOperators
+	public sealed class CSharpOperators
 	{
 		readonly ICompilation compilation;
 		
@@ -91,7 +91,7 @@ namespace ICSharpCode.Decompiler.CSharp.Resolver
 			throw new ArgumentException();
 		}
 		
-		internal class OperatorMethod : IParameterizedMember
+		public class OperatorMethod : IParameterizedMember
 		{
 			readonly ICompilation compilation;
 			internal readonly List<IParameter> parameters = new List<IParameter>();

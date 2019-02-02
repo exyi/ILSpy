@@ -29,7 +29,7 @@ namespace ICSharpCode.Decompiler.TypeSystem.Implementation
 	/// </summary>
 	public class SpecializedMethod : SpecializedParameterizedMember, IMethod
 	{
-		internal static IMethod Create(IMethod methodDefinition, TypeParameterSubstitution substitution)
+		public static IMethod Create(IMethod methodDefinition, TypeParameterSubstitution substitution)
 		{
 			if (TypeParameterSubstitution.Identity.Equals(substitution))
 				return methodDefinition;
