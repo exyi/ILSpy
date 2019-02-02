@@ -117,7 +117,8 @@ namespace ICSharpCode.Decompiler.TypeSystem.Implementation
 				IModule asm = module.Resolve(context);
 				if (asm != null) {
 					type = asm.GetTypeDefinition(fullTypeName);
-				} else {
+				}
+				if (type == null) {
 					type = ResolveInAllAssemblies(context);
 				}
 			}
