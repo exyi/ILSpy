@@ -54,18 +54,19 @@ namespace ICSharpCode.Decompiler.CSharp
 			public bool IsExpandedForm;
 			public int Length => Arguments.Length;
 
-			public IEnumerable<ResolveResult> GetArgumentResolveResults()
+			public IEnumerable<ResolveResult> GetArgumentResolveResults(int skipCount = 0)
 			{
 				return FirstOptionalArgumentIndex < 0
-					? Arguments.Select(a => a.ResolveResult)
-					: Arguments.Take(FirstOptionalArgumentIndex).Select(a => a.ResolveResult);
+					? Arguments.Skip(skipCount).Select(a => a.ResolveResult)
+					: Arguments.Skip(skipCount).Take(FirstOptionalArgumentIndex).Select(a => a.ResolveResult);
 			}
 
-			public IEnumerable<Expression> GetArgumentExpressions()
+			public IEnumerable<Expression> GetArgumentExpressions(int skipCount = 0)
 			{
 				if (AddNamesToPrimitiveValues && IsPrimitiveValue.Any() && !IsExpandedForm
 					&& !ParameterNames.Any(p => string.IsNullOrEmpty(p)))
 				{
+					Debug.Assert(skipCount == 0);
 					if (ArgumentNames == null) {
 						ArgumentNames = new string[Arguments.Length];
 					}
@@ -78,9 +79,10 @@ namespace ICSharpCode.Decompiler.CSharp
 				}
 				if (ArgumentNames == null) {
 					if (FirstOptionalArgumentIndex < 0)
-						return Arguments.Select(arg => arg.Expression);
-					return Arguments.Take(FirstOptionalArgumentIndex).Select(arg => arg.Expression);
+						return Arguments.Skip(skipCount).Select(arg => arg.Expression);
+					return Arguments.Skip(skipCount).Take(FirstOptionalArgumentIndex).Select(arg => arg.Expression);
 				} else {
+					Debug.Assert(skipCount == 0);
 					if (FirstOptionalArgumentIndex < 0) {
 						return Arguments.Zip(ArgumentNames,
 							(arg, name) => {
@@ -162,7 +164,8 @@ namespace ICSharpCode.Decompiler.CSharp
 				}
 				return tuple.WithRR(new TupleResolveResult(
 					expressionBuilder.compilation,
-					elementRRs.ToImmutableArray()
+					elementRRs.ToImmutableArray(),
+					valueTupleAssembly: inst.Method.DeclaringType.GetDefinition()?.ParentModule
 				)).WithILInstruction(inst);
 			}
 			return Build(inst.OpCode, inst.Method, inst.Arguments, constrainedTo: inst.ConstrainedTo)
@@ -184,7 +187,7 @@ namespace ICSharpCode.Decompiler.CSharp
 			} else {
 				target = expressionBuilder.TranslateTarget(
 					callArguments.FirstOrDefault(),
-					nonVirtualInvocation: callOpCode == OpCode.Call,
+					nonVirtualInvocation: callOpCode == OpCode.Call || method.IsConstructor,
 					memberStatic: method.IsStatic,
 					memberDeclaringType: constrainedTo ?? method.DeclaringType);
 				if (constrainedTo == null
@@ -232,7 +235,7 @@ namespace ICSharpCode.Decompiler.CSharp
 			if (method.Name == "Invoke" && method.DeclaringType.Kind == TypeKind.Delegate && !IsNullConditional(target)) {
 				return new InvocationExpression(target, argumentList.GetArgumentExpressions())
 					.WithRR(new CSharpInvocationResolveResult(target.ResolveResult, method,
-						argumentList.GetArgumentResolveResults().ToList(), isExpandedForm: argumentList.IsExpandedForm));
+						argumentList.GetArgumentResolveResults().ToList(), isExpandedForm: argumentList.IsExpandedForm, isDelegateInvocation: true));
 			}
 
 			if (settings.StringInterpolation && IsInterpolatedStringCreation(method, argumentList) &&
@@ -373,17 +376,15 @@ namespace ICSharpCode.Decompiler.CSharp
 			// sure that the correct method is called by resolving any ambiguities by inserting casts, if necessary.
 
 			ExpectedTargetDetails expectedTargetDetails = new ExpectedTargetDetails { CallOpCode = callOpCode };
-
-			// Special case: only in this case, collection initializers, are extension methods already transformed on
-			// ILAst level, therefore we have to exclude the first argument.
-			int firstParamIndex = method.IsExtensionMethod ? 1 : 0;
+			var unused = new IdentifierExpression("initializedObject").WithRR(target).WithoutILInstruction();
+			var args = callArguments.ToList();
+			if (method.IsExtensionMethod)
+				args.Insert(0, new Nop());
 
 			var argumentList = BuildArgumentList(expectedTargetDetails, target, method,
-				firstParamIndex, callArguments, null);
+				firstParamIndex: 0, args, null);
 			argumentList.ArgumentNames = null;
 			argumentList.AddNamesToPrimitiveValues = false;
-
-			var unused = new IdentifierExpression("initializedObject").WithRR(target).WithoutILInstruction();
 			var transform = GetRequiredTransformationsForCall(expectedTargetDetails, method, ref unused,
 				ref argumentList, CallTransformation.None, out IParameterizedMember foundMethod);
 			Debug.Assert(transform == CallTransformation.None || transform == CallTransformation.NoOptionalArgumentAllowed);
@@ -391,14 +392,22 @@ namespace ICSharpCode.Decompiler.CSharp
 			// Calls with only one argument do not need an array initializer expression to wrap them.
 			// Any special cases are handled by the caller (i.e., ExpressionBuilder.TranslateObjectAndCollectionInitializer)
 			// Note: we intentionally ignore the firstOptionalArgumentIndex in this case.
-			if (argumentList.Arguments.Length == 1)
-				return argumentList.Arguments[0];
+			int skipCount;
+			if (method.IsExtensionMethod) {
+				if (argumentList.Arguments.Length == 2)
+					return argumentList.Arguments[1];
+				skipCount = 1;
+			} else {
+				if (argumentList.Arguments.Length == 1)
+					return argumentList.Arguments[0];
+				skipCount = 0;
+			}
 
 			if ((transform & CallTransformation.NoOptionalArgumentAllowed) != 0)
 				argumentList.FirstOptionalArgumentIndex = -1;
 
-			return new ArrayInitializerExpression(argumentList.GetArgumentExpressions())
-				.WithRR(new CSharpInvocationResolveResult(target, method, argumentList.GetArgumentResolveResults().ToArray(),
+			return new ArrayInitializerExpression(argumentList.GetArgumentExpressions(skipCount))
+				.WithRR(new CSharpInvocationResolveResult(target, method, argumentList.GetArgumentResolveResults(skipCount).ToArray(),
 					isExtensionMethodInvocation: method.IsExtensionMethod, isExpandedForm: argumentList.IsExpandedForm));
 		}
 
@@ -593,7 +602,7 @@ namespace ICSharpCode.Decompiler.CSharp
 					parameter = method.Parameters[i - firstParamIndex];
 				}
 				var arg = expressionBuilder.Translate(callArguments[i], parameter.Type);
-				if (IsPrimitiveValueThatShouldHaveNamedArgument(arg, method)) {
+				if (IsPrimitiveValueThatShouldBeNamedArgument(arg, method, parameter)) {
 					isPrimitiveValue.Set(arguments.Count);
 				}
 				if (IsOptionalArgument(parameter, arg)) {
@@ -640,15 +649,15 @@ namespace ICSharpCode.Decompiler.CSharp
 			list.IsExpandedForm = isExpandedForm;
 			list.IsPrimitiveValue = isPrimitiveValue;
 			list.FirstOptionalArgumentIndex = firstOptionalArgumentIndex;
-			list.AddNamesToPrimitiveValues = expressionBuilder.settings.NonTrailingNamedArguments;
+			list.AddNamesToPrimitiveValues = expressionBuilder.settings.NamedArguments && expressionBuilder.settings.NonTrailingNamedArguments;
 			return list;
 		}
 
-		private bool IsPrimitiveValueThatShouldHaveNamedArgument(TranslatedExpression arg, IMethod method)
+		private bool IsPrimitiveValueThatShouldBeNamedArgument(TranslatedExpression arg, IMethod method, IParameter p)
 		{
 			if (!arg.ResolveResult.IsCompileTimeConstant || method.DeclaringType.IsKnownType(KnownTypeCode.NullableOfT))
 				return false;
-			return arg.ResolveResult.Type.IsKnownType(KnownTypeCode.Boolean);
+			return p.Type.IsKnownType(KnownTypeCode.Boolean);
 		}
 
 		private bool TransformParamsArgument(ExpectedTargetDetails expectedTargetDetails, ResolveResult targetResolveResult,
@@ -714,8 +723,7 @@ namespace ICSharpCode.Decompiler.CSharp
 				|| a.AttributeType.IsKnownType(KnownAttribute.CallerFilePath)
 				|| a.AttributeType.IsKnownType(KnownAttribute.CallerLineNumber)))
 				return false;
-			return (parameter.ConstantValue == null && arg.ResolveResult.ConstantValue == null)
-				|| (parameter.ConstantValue != null && parameter.ConstantValue.Equals(arg.ResolveResult.ConstantValue));
+			return object.Equals(parameter.GetConstantValue(), arg.ResolveResult.ConstantValue);
 		}
 
 		[Flags]
@@ -1185,6 +1193,7 @@ namespace ICSharpCode.Decompiler.CSharp
 
 		TranslatedExpression HandleDelegateConstruction(CallInstruction inst)
 		{
+			ILInstruction thisArg = inst.Arguments[0];
 			ILInstruction func = inst.Arguments[1];
 			IMethod method;
 			switch (func.OpCode) {
@@ -1203,16 +1212,27 @@ namespace ICSharpCode.Decompiler.CSharp
 			bool requireTarget;
 			if (method.IsExtensionMethod && invokeMethod != null && method.Parameters.Count - 1 == invokeMethod.Parameters.Count) {
 				targetType = method.Parameters[0].Type;
-				target = expressionBuilder.Translate(inst.Arguments[0], targetType);
-				target = ExpressionBuilder.UnwrapBoxingConversion(target);
+				if (targetType.Kind == TypeKind.ByReference && thisArg is Box thisArgBox) {
+					targetType = ((ByReferenceType)targetType).ElementType;
+					thisArg = thisArgBox.Argument;
+				}
+				target = expressionBuilder.Translate(thisArg, targetType);
 				requireTarget = true;
 			} else {
 				targetType = method.DeclaringType;
-				target = expressionBuilder.TranslateTarget(inst.Arguments[0],
+				if (targetType.IsReferenceType == false && thisArg is Box thisArgBox) {
+					// Normal struct instance method calls (which TranslateTarget is meant for) expect a 'ref T',
+					// but delegate construction uses a 'box T'.
+					if (thisArgBox.Argument is LdObj ldobj) {
+						thisArg = ldobj.Target;
+					} else {
+						thisArg = new AddressOf(thisArgBox.Argument);
+					}
+				}
+				target = expressionBuilder.TranslateTarget(thisArg,
 					nonVirtualInvocation: func.OpCode == OpCode.LdFtn,
 					memberStatic: method.IsStatic,
 					memberDeclaringType: method.DeclaringType);
-				target = ExpressionBuilder.UnwrapBoxingConversion(target);
 				requireTarget = expressionBuilder.HidesVariableWithName(method.Name)
 					|| (method.IsStatic ? !expressionBuilder.IsCurrentOrContainingType(method.DeclaringTypeDefinition) : !(target.Expression is ThisReferenceExpression));
 			}

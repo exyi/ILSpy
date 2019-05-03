@@ -66,6 +66,10 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 							return false;
 						if (DelegateConstruction.IsDelegateConstruction(newObjInst) || DelegateConstruction.IsPotentialClosure(context, newObjInst))
 							return false;
+						// Cannot build a collection/object initializer attached to an AnonymousTypeCreateExpression:s 
+						// anon = new { A = 5 } { 3,4,5 } is invalid syntax.
+						if (newObjInst.Method.DeclaringType.ContainsAnonymousType())
+							return false;
 						instType = newObjInst.Method.DeclaringType;
 						break;
 					case DefaultValue defaultVal:
@@ -265,6 +269,7 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 						instruction = call.Arguments[0];
 						if (method.IsAccessor) {
 							var property = method.AccessorOwner as IProperty;
+							if (!CanBeUsedInInitializer(property, resolveContext, kind, path)) goto default;
 							var isGetter = method.Equals(property?.Getter);
 							var indices = call.Arguments.Skip(1).Take(call.Arguments.Count - (isGetter ? 1 : 2)).ToArray();
 							if (indices.Length > 0 && !settings.DictionaryInitializers) goto default;
@@ -292,7 +297,7 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 						}
 						break;
 					case LdObj ldobj: {
-						if (ldobj.Target is LdFlda ldflda) {
+						if (ldobj.Target is LdFlda ldflda && (kind != AccessPathKind.Setter || !ldflda.Field.IsReadOnly)) {
 							path.Insert(0, new AccessPathElement(ldobj.OpCode, ldflda.Field));
 							instruction = ldflda.Target;
 							break;
@@ -332,6 +337,21 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 			if (kind != AccessPathKind.Invalid && values.SelectMany(v => v.Descendants).OfType<IInstructionWithVariableOperand>().Any(ld => ld.Variable == target && (ld is LdLoc || ld is LdLoca)))
 				kind = AccessPathKind.Invalid;
 			return (kind, path, values, target);
+		}
+
+		private static bool CanBeUsedInInitializer(IProperty property, CSharpTypeResolveContext resolveContext, AccessPathKind kind, List<AccessPathElement> path)
+		{
+			if (property.CanSet && (property.Accessibility == property.Setter.Accessibility || IsAccessorAccessible(property.Setter, resolveContext)))
+				return true;
+			return kind != AccessPathKind.Setter;
+		}
+
+		private static bool IsAccessorAccessible(IMethod setter, CSharpTypeResolveContext resolveContext)
+		{
+			if (resolveContext == null)
+				return true;
+			var lookup = new MemberLookup(resolveContext.CurrentTypeDefinition, resolveContext.CurrentModule);
+			return lookup.IsAccessible(setter, allowProtectedAccess: setter.DeclaringTypeDefinition == resolveContext.CurrentTypeDefinition);
 		}
 
 		static bool IsMethodApplicable(IMethod method, IReadOnlyList<ILInstruction> arguments, IType rootType, CSharpTypeResolveContext resolveContext, DecompilerSettings settings)

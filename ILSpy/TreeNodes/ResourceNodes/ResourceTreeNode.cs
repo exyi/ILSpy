@@ -24,6 +24,7 @@ using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Utils;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.Metadata;
+using ICSharpCode.ILSpy.Properties;
 using ICSharpCode.ILSpy.TextView;
 using Microsoft.Win32;
 
@@ -58,7 +59,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 		
 		public override FilterResult Filter(FilterSettings settings)
 		{
-			if (!settings.ShowInternalApi && (r.Attributes & ManifestResourceAttributes.VisibilityMask) == ManifestResourceAttributes.Private)
+			if (settings.ShowApiLevel == ApiVisibility.PublicOnly && (r.Attributes & ManifestResourceAttributes.VisibilityMask) == ManifestResourceAttributes.Private)
 				return FilterResult.Hidden;
 			if (settings.SearchTermMatches(r.Name))
 				return FilterResult.Match;
@@ -72,7 +73,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 			
 			ISmartTextOutput smartOutput = output as ISmartTextOutput;
 			if (smartOutput != null) {
-				smartOutput.AddButton(Images.Save, "Save", delegate { Save(null); });
+				smartOutput.AddButton(Images.Save, Resources.Save, delegate { Save(null); });
 				output.WriteLine();
 			}
 		}

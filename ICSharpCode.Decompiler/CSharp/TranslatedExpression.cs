@@ -224,7 +224,10 @@ namespace ICSharpCode.Decompiler.CSharp
 					newElementRRs.Add(newElementExpr.ResolveResult);
 				}
 				return newTupleExpr.WithILInstruction(this.ILInstructions)
-					.WithRR(new TupleResolveResult(expressionBuilder.compilation, newElementRRs.ToImmutableArray()));
+					.WithRR(new TupleResolveResult(
+						expressionBuilder.compilation, newElementRRs.ToImmutableArray(), 
+						valueTupleAssembly: targetTupleType.GetDefinition()?.ParentModule
+					));
 			}
 			var compilation = expressionBuilder.compilation;
 			var conversions = Resolver.CSharpConversions.Get(compilation);
@@ -348,9 +351,18 @@ namespace ICSharpCode.Decompiler.CSharp
 				return pointerExpr.ConvertTo(targetType, expressionBuilder);
 			}
 			if (targetType.Kind == TypeKind.ByReference) {
+				var elementType = ((ByReferenceType)targetType).ElementType;
+				if (this.Expression is DirectionExpression thisDir && this.ILInstructions.Any(i => i.OpCode == OpCode.AddressOf)
+					&& thisDir.Expression.GetResolveResult()?.Type.GetStackType() == elementType.GetStackType()) {
+					// When converting a reference to a temporary to a different type,
+					// apply the cast to the temporary instead.
+					var convertedTemp = this.UnwrapChild(thisDir.Expression).ConvertTo(elementType, expressionBuilder, checkForOverflow);
+					return new DirectionExpression(FieldDirection.Ref, convertedTemp)
+						.WithILInstruction(this.ILInstructions)
+						.WithRR(new ByReferenceResolveResult(convertedTemp.ResolveResult, false));
+				}
 				// Convert from integer/pointer to reference.
 				// First, convert to the corresponding pointer type:
-				var elementType = ((ByReferenceType)targetType).ElementType;
 				var arg = this.ConvertTo(new PointerType(elementType), expressionBuilder, checkForOverflow);
 				Expression expr;
 				ResolveResult elementRR;
@@ -422,7 +434,27 @@ namespace ICSharpCode.Decompiler.CSharp
 				.WithoutILInstruction()
 				.WithRR(new ConstantResolveResult(compilation.FindType(KnownTypeCode.Int32), val));
 		}
-		
+
+		/// <summary>
+		/// In conditional contexts, remove the bool-cast emitted when converting
+		/// an "implicit operator bool" invocation.
+		/// </summary>
+		public TranslatedExpression UnwrapImplicitBoolConversion(Func<IType, bool> typeFilter = null)
+		{
+			if (!this.Type.IsKnownType(KnownTypeCode.Boolean))
+				return this;
+			if (!(this.ResolveResult is ConversionResolveResult rr))
+				return this;
+			if (!(rr.Conversion.IsUserDefined && rr.Conversion.IsImplicit))
+				return this;
+			if (typeFilter != null && !typeFilter(rr.Input.Type))
+				return this;
+			if (this.Expression is CastExpression cast) {
+				return this.UnwrapChild(cast.Expression);
+			}
+			return this;
+		}
+
 		/// <summary>
 		/// Converts this expression to a boolean expression.
 		/// 
