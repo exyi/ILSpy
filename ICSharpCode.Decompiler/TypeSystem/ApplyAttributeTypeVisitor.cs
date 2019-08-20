@@ -162,7 +162,7 @@ namespace ICSharpCode.Decompiler.TypeSystem
 		void ExpectDummyNullabilityForGenericValueType()
 		{
 			var n = GetNullability();
-			Debug.Assert(n == Nullability.Oblivious);
+			// Debug.Assert(n == Nullability.Oblivious);
 		}
 
 		public override IType VisitArrayType(ArrayType type)
