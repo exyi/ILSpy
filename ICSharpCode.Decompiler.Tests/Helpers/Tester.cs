@@ -518,5 +518,43 @@ namespace ICSharpCode.Decompiler.Tests.Helpers
 				Assert.Fail(b.ToString());
 			}
 		}
+
+		internal static void RepeatOnIOError(Action action, int numTries = 5)
+		{
+			for (int i = 0; i < numTries - 1; i++) {
+				try {
+					action();
+					return;
+				} catch (IOException) {
+				} catch (UnauthorizedAccessException) {
+					// potential virus scanner problem
+				}
+				Thread.Sleep(10);
+			}
+			// If the last try still fails, don't catch the exception
+			action();
+		}
+
+		public static void SignAssembly(string assemblyPath, string keyFilePath)
+		{
+			string snPath = SdkUtility.GetSdkPath("sn.exe");
+
+			ProcessStartInfo info = new ProcessStartInfo(snPath);
+			info.Arguments = $"-R \"{assemblyPath}\" \"{keyFilePath}\"";
+			info.RedirectStandardError = true;
+			info.RedirectStandardOutput = true;
+			info.UseShellExecute = false;
+
+			Process process = Process.Start(info);
+
+			var outputTask = process.StandardOutput.ReadToEndAsync();
+			var errorTask = process.StandardError.ReadToEndAsync();
+
+			Task.WaitAll(outputTask, errorTask);
+			process.WaitForExit();
+
+			Console.WriteLine("output: " + outputTask.Result);
+			Console.WriteLine("errors: " + errorTask.Result);
+		}
 	}
 }

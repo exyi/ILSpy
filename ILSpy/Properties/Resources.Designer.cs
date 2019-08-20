@@ -304,6 +304,25 @@ namespace ICSharpCode.ILSpy.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The directory is not empty. File will be overwritten.
+        ///Are you sure you want to continue?.
+        /// </summary>
+        public static string AssemblySaveCodeDirectoryNotEmpty {
+            get {
+                return ResourceManager.GetString("AssemblySaveCodeDirectoryNotEmpty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Project Directory not empty.
+        /// </summary>
+        public static string AssemblySaveCodeDirectoryNotEmptyTitle {
+            get {
+                return ResourceManager.GetString("AssemblySaveCodeDirectoryNotEmptyTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Automatically check for updates every week.
         /// </summary>
         public static string AutomaticallyCheckUpdatesEveryWeek {
@@ -327,6 +346,15 @@ namespace ICSharpCode.ILSpy.Properties {
         public static string Cancel {
             get {
                 return ResourceManager.GetString("Cancel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Entity could not be resolved. Cannot analyze entities from missing assembly references. Add the missing reference and try again..
+        /// </summary>
+        public static string CannotAnalyzeMissingRef {
+            get {
+                return ResourceManager.GetString("CannotAnalyzeMissingRef", resourceCulture);
             }
         }
         
@@ -462,6 +490,15 @@ namespace ICSharpCode.ILSpy.Properties {
         public static string DecompilerSettings_AllowExtensionAddMethodsInCollectionInitializerExpressions {
             get {
                 return ResourceManager.GetString("DecompilerSettings.AllowExtensionAddMethodsInCollectionInitializerExpressions", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use &apos;ref&apos; extension methods.
+        /// </summary>
+        public static string DecompilerSettings_AllowExtensionMethodSyntaxOnRef {
+            get {
+                return ResourceManager.GetString("DecompilerSettings.AllowExtensionMethodSyntaxOnRef", resourceCulture);
             }
         }
         
@@ -691,11 +728,11 @@ namespace ICSharpCode.ILSpy.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Introduce local functions (NOT IMPLEMENTED!).
+        ///   Looks up a localized string similar to Introduce local functions.
         /// </summary>
-        public static string DecompilerSettings_IntroduceLocalFunctionsNOTIMPLEMENTED {
+        public static string DecompilerSettings_IntroduceLocalFunctions {
             get {
-                return ResourceManager.GetString("DecompilerSettings.IntroduceLocalFunctionsNOTIMPLEMENTED", resourceCulture);
+                return ResourceManager.GetString("DecompilerSettings.IntroduceLocalFunctions", resourceCulture);
             }
         }
         
@@ -761,6 +798,15 @@ namespace ICSharpCode.ILSpy.Properties {
         public static string DecompilerSettings_RemoveDeadAndSideEffectFreeCodeUseWithCaution {
             get {
                 return ResourceManager.GetString("DecompilerSettings.RemoveDeadAndSideEffectFreeCodeUseWithCaution", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remove dead stores (use with caution!).
+        /// </summary>
+        public static string DecompilerSettings_RemoveDeadStores {
+            get {
+                return ResourceManager.GetString("DecompilerSettings.RemoveDeadStores", resourceCulture);
             }
         }
         
@@ -896,6 +942,15 @@ namespace ICSharpCode.ILSpy.Properties {
         public static string DecompilerSettings_UseStringInterpolation {
             get {
                 return ResourceManager.GetString("DecompilerSettings.UseStringInterpolation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Use throw expressions.
+        /// </summary>
+        public static string DecompilerSettings_UseThrowExpressions {
+            get {
+                return ResourceManager.GetString("DecompilerSettings.UseThrowExpressions", resourceCulture);
             }
         }
         
@@ -1103,6 +1158,15 @@ namespace ICSharpCode.ILSpy.Properties {
         public static string GeneratePortable {
             get {
                 return ResourceManager.GetString("GeneratePortable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Highlight matching braces.
+        /// </summary>
+        public static string HighlightMatchingBraces {
+            get {
+                return ResourceManager.GetString("HighlightMatchingBraces", resourceCulture);
             }
         }
         
@@ -1377,7 +1441,7 @@ namespace ICSharpCode.ILSpy.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to ReloadAssemblies.
+        ///   Looks up a localized string similar to Reload all assemblies.
         /// </summary>
         public static string RefreshCommand_ReloadAssemblies {
             get {
@@ -1476,7 +1540,7 @@ namespace ICSharpCode.ILSpy.Properties {
         }
         
         /// <summary>
-        ///   查找类似 Search MSDN... 的本地化字符串。
+        ///   Looks up a localized string similar to Search MSDN....
         /// </summary>
         public static string SearchMSDN {
             get {
@@ -1485,7 +1549,7 @@ namespace ICSharpCode.ILSpy.Properties {
         }
         
         /// <summary>
-        ///    Looks up a localized string similar to Search.
+        ///   Looks up a localized string similar to Search.
         /// </summary>
         public static string SearchPane_Search {
             get {
@@ -1512,11 +1576,29 @@ namespace ICSharpCode.ILSpy.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Select language to decompile to.
+        /// </summary>
+        public static string SelectLanguageDropdownTooltip {
+            get {
+                return ResourceManager.GetString("SelectLanguageDropdownTooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Select a list:.
         /// </summary>
         public static string SelectList {
             get {
                 return ResourceManager.GetString("SelectList", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Select version of language to output.
+        /// </summary>
+        public static string SelectVersionDropdownTooltip {
+            get {
+                return ResourceManager.GetString("SelectVersionDropdownTooltip", resourceCulture);
             }
         }
         

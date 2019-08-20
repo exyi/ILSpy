@@ -176,25 +176,25 @@ namespace ICSharpCode.Decompiler.CSharp.Syntax
 		public bool UseCustomEvents { get; set; }
 
 		/// <summary>
-		/// Controls if unbound type argument names are inserted in the ast or not.
+		/// Controls whether unbound type argument names are inserted in the ast or not.
 		/// The default value is <c>false</c>.
 		/// </summary>
 		public bool ConvertUnboundTypeArguments { get; set;}
 
 		/// <summary>
-		/// Controls if aliases should be used inside the type name or not.
+		/// Controls whether aliases should be used inside the type name or not.
 		/// The default value is <c>true</c>.
 		/// </summary>
 		public bool UseAliases { get; set; }
 
 		/// <summary>
-		/// Controls if constants like <c>int.MaxValue</c> are converted to a <see cref="MemberReferenceExpression"/> or <see cref="PrimitiveExpression" />.
+		/// Controls whether constants like <c>int.MaxValue</c> are converted to a <see cref="MemberReferenceExpression"/> or <see cref="PrimitiveExpression" />.
 		/// The default value is <c>true</c>.
 		/// </summary>
 		public bool UseSpecialConstants { get; set; }
 
 		/// <summary>
-		/// Controls if integral constants should be printed in hexadecimal format.
+		/// Controls whether integral constants should be printed in hexadecimal format.
 		/// The default value is <c>false</c>.
 		/// </summary>
 		public bool PrintIntegralValuesAsHex { get; set; }
@@ -407,7 +407,7 @@ namespace ICSharpCode.Decompiler.CSharp.Syntax
 
 		bool TypeDefMatches(ITypeDefinition typeDef, IType type)
 		{
-			if (type.Name != typeDef.Name || type.Namespace != typeDef.Namespace || type.TypeParameterCount != typeDef.TypeParameterCount)
+			if (type == null || type.Name != typeDef.Name || type.Namespace != typeDef.Namespace || type.TypeParameterCount != typeDef.TypeParameterCount)
 				return false;
 			bool defIsNested = typeDef.DeclaringTypeDefinition != null;
 			bool typeIsNested = type.DeclaringType != null;
@@ -527,12 +527,18 @@ namespace ICSharpCode.Decompiler.CSharp.Syntax
 		{
 			Attribute attr = new Attribute();
 			attr.Type = ConvertAttributeType(attribute.AttributeType);
-			SimpleType st = attr.Type as SimpleType;
-			MemberType mt = attr.Type as MemberType;
-			if (st != null && st.Identifier.EndsWith("Attribute", StringComparison.Ordinal)) {
-				st.Identifier = st.Identifier.Substring(0, st.Identifier.Length - 9);
-			} else if (mt != null && mt.MemberName.EndsWith("Attribute", StringComparison.Ordinal)) {
-				mt.MemberName = mt.MemberName.Substring(0, mt.MemberName.Length - 9);
+			switch (attr.Type) {
+				case SimpleType st:
+					if (st.Identifier.EndsWith("Attribute", StringComparison.Ordinal))
+						st.Identifier = st.Identifier.Substring(0, st.Identifier.Length - 9);
+					break;
+				case MemberType mt:
+					if (mt.MemberName.EndsWith("Attribute", StringComparison.Ordinal))
+						mt.MemberName = mt.MemberName.Substring(0, mt.MemberName.Length - 9);
+					break;
+			}
+			if (AddResolveResultAnnotations && attribute.Constructor != null) {
+				attr.AddAnnotation(new MemberResolveResult(null, attribute.Constructor));
 			}
 			var parameters = attribute.Constructor?.Parameters ?? EmptyList<IParameter>.Instance;
 			for (int i = 0; i < attribute.FixedArguments.Length; i++) {
@@ -739,7 +745,7 @@ namespace ICSharpCode.Decompiler.CSharp.Syntax
 			if (type == null)
 				throw new ArgumentNullException("type");
 			if (constantValue == null) {
-				if (type.IsReferenceType == true) {
+				if (type.IsReferenceType == true || type.IsKnownType(KnownTypeCode.NullableOfT)) {
 					var expr = new NullReferenceExpression();
 					if (AddResolveResultAnnotations)
 						expr.AddAnnotation(new ConstantResolveResult(SpecialType.NullType, null));
@@ -1086,8 +1092,12 @@ namespace ICSharpCode.Decompiler.CSharp.Syntax
 			{
 				AstType mathAstType = ConvertType(mathType);
 				var fieldRef = new MemberReferenceExpression(new TypeReferenceExpression(mathAstType), memberName);
-				if (AddResolveResultAnnotations)
-					fieldRef.WithRR(new MemberResolveResult(mathAstType.GetResolveResult(), mathType.GetFields(f => f.Name == memberName).Single()));
+				if (AddResolveResultAnnotations) {
+					var field = mathType.GetFields(f => f.Name == memberName).FirstOrDefault();
+					if (field != null) {
+						fieldRef.WithRR(new MemberResolveResult(mathAstType.GetResolveResult(), field));
+					}
+				}
 				if (type.IsKnownType(KnownTypeCode.Double))
 					return fieldRef;
 				if (mathType.Name == "MathF")
@@ -1440,6 +1450,9 @@ namespace ICSharpCode.Decompiler.CSharp.Syntax
 				decl.AddAnnotation(new TypeResolveResult(d));
 			}
 			decl.ReturnType = ConvertType(invokeMethod.ReturnType);
+			if (invokeMethod.ReturnTypeIsRefReadOnly && decl.ReturnType is ComposedType ct && ct.HasRefSpecifier) {
+				ct.HasReadOnlySpecifier = true;
+			}
 			decl.Name = d.Name;
 			
 			int outerTypeParameterCount = (d.DeclaringTypeDefinition == null) ? 0 : d.DeclaringTypeDefinition.TypeParameterCount;
@@ -1626,8 +1639,8 @@ namespace ICSharpCode.Decompiler.CSharp.Syntax
 			foreach (IParameter p in method.Parameters) {
 				decl.Parameters.Add(ConvertParameter(p));
 			}
-			if (method.IsExtensionMethod && method.ReducedFrom == null && decl.Parameters.Any() && decl.Parameters.First().ParameterModifier == ParameterModifier.None)
-				decl.Parameters.First().ParameterModifier = ParameterModifier.This;
+			if (method.IsExtensionMethod && method.ReducedFrom == null && decl.Parameters.Any())
+				decl.Parameters.First().HasThisModifier = true;
 			
 			if (this.ShowTypeParameters && this.ShowTypeParameterConstraints && !method.IsOverride && !method.IsExplicitInterfaceImplementation) {
 				foreach (ITypeParameter tp in method.TypeParameters) {
@@ -1772,7 +1785,7 @@ namespace ICSharpCode.Decompiler.CSharp.Syntax
 		
 		Constraint ConvertTypeParameterConstraint(ITypeParameter tp)
 		{
-			if (!tp.HasDefaultConstructorConstraint && !tp.HasReferenceTypeConstraint && !tp.HasValueTypeConstraint && tp.DirectBaseTypes.All(IsObjectOrValueType)) {
+			if (!tp.HasDefaultConstructorConstraint && !tp.HasReferenceTypeConstraint && !tp.HasValueTypeConstraint && tp.NullabilityConstraint != Nullability.NotNullable && tp.DirectBaseTypes.All(IsObjectOrValueType)) {
 				return null;
 			}
 			Constraint c = new Constraint();
@@ -1789,10 +1802,22 @@ namespace ICSharpCode.Decompiler.CSharp.Syntax
 				} else {
 					c.BaseTypes.Add(new PrimitiveType("struct"));
 				}
+			} else if (tp.NullabilityConstraint == Nullability.NotNullable) {
+				c.BaseTypes.Add(new PrimitiveType("notnull"));
 			}
-			foreach (IType t in tp.DirectBaseTypes) {
-				if (!IsObjectOrValueType(t))
-					c.BaseTypes.Add(ConvertType(t));
+			foreach (TypeConstraint t in tp.TypeConstraints) {
+				if (!IsObjectOrValueType(t.Type) || t.Attributes.Count > 0) {
+					AstType astType = ConvertType(t.Type);
+					if (t.Attributes.Count > 0) {
+						var attrSection = new AttributeSection();
+						attrSection.Attributes.AddRange(t.Attributes.Select(ConvertAttribute));
+						astType = new ComposedType {
+							Attributes = { attrSection },
+							BaseType = astType
+						};
+					}
+					c.BaseTypes.Add(astType);
+				}
 			}
 			if (tp.HasDefaultConstructorConstraint && !tp.HasValueTypeConstraint) {
 				c.BaseTypes.Add(new PrimitiveType("new"));

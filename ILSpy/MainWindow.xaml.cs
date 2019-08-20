@@ -24,6 +24,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -37,10 +38,12 @@ using ICSharpCode.Decompiler.Documentation;
 using ICSharpCode.Decompiler.Metadata;
 using ICSharpCode.Decompiler.TypeSystem;
 using ICSharpCode.Decompiler.TypeSystem.Implementation;
+using ICSharpCode.ILSpy.Controls;
 using ICSharpCode.ILSpy.TextView;
 using ICSharpCode.ILSpy.TreeNodes;
 using ICSharpCode.TreeView;
 using Microsoft.Win32;
+using OSVersionHelper;
 
 namespace ICSharpCode.ILSpy
 {
@@ -283,23 +286,24 @@ namespace ICSharpCode.ILSpy
 				LoadAssemblies(nugetPackagesToLoad, commandLineLoadedAssemblies, focusNode: false);
 				nugetPackagesToLoad.Clear();
 			}
-			NavigateOnLaunch(args.NavigateTo, sessionSettings.ActiveTreeViewPath, spySettings);
+			var relevantAssemblies = commandLineLoadedAssemblies.ToList();
+			commandLineLoadedAssemblies.Clear(); // clear references once we don't need them anymore
+			NavigateOnLaunch(args.NavigateTo, sessionSettings.ActiveTreeViewPath, spySettings, relevantAssemblies);
 			if (args.Search != null)
 			{
 				SearchPane.Instance.SearchTerm = args.Search;
 				SearchPane.Instance.Show();
 			}
-			commandLineLoadedAssemblies.Clear(); // clear references once we don't need them anymore
 		}
 
-		async void NavigateOnLaunch(string navigateTo, string[] activeTreeViewPath, ILSpySettings spySettings)
+		async void NavigateOnLaunch(string navigateTo, string[] activeTreeViewPath, ILSpySettings spySettings, List<LoadedAssembly> relevantAssemblies)
 		{
 			var initialSelection = treeView.SelectedItem;
 			if (navigateTo != null) {
 				bool found = false;
 				if (navigateTo.StartsWith("N:", StringComparison.Ordinal)) {
 					string namespaceName = navigateTo.Substring(2);
-					foreach (LoadedAssembly asm in commandLineLoadedAssemblies) {
+					foreach (LoadedAssembly asm in relevantAssemblies) {
 						AssemblyTreeNode asmNode = assemblyListTreeNode.FindAssemblyNode(asm);
 						if (asmNode != null) {
 							// FindNamespaceNode() blocks the UI if the assembly is not yet loaded,
@@ -316,7 +320,7 @@ namespace ICSharpCode.ILSpy
 						}
 					}
 				} else {
-					IEntity mr = await Task.Run(() => FindEntityInCommandLineLoadedAssemblies(navigateTo));
+					IEntity mr = await Task.Run(() => FindEntityInRelevantAssemblies(navigateTo, relevantAssemblies));
 					if (mr != null && mr.ParentModule.PEFile != null) {
 						found = true;
 						if (treeView.SelectedItem == initialSelection) {
@@ -361,7 +365,7 @@ namespace ICSharpCode.ILSpy
 			}
 		}
 
-		private IEntity FindEntityInCommandLineLoadedAssemblies(string navigateTo)
+		private IEntity FindEntityInRelevantAssemblies(string navigateTo, IEnumerable<LoadedAssembly> relevantAssemblies)
 		{
 			ITypeReference typeRef = null;
 			IMemberReference memberRef = null;
@@ -371,7 +375,7 @@ namespace ICSharpCode.ILSpy
 				memberRef = IdStringProvider.ParseMemberIdString(navigateTo);
 				typeRef = memberRef.DeclaringTypeReference;
 			}
-			foreach (LoadedAssembly asm in commandLineLoadedAssemblies) {
+			foreach (LoadedAssembly asm in relevantAssemblies.ToList()) {
 				var module = asm.GetPEFileOrNull();
 				if (CanResolveTypeInPEFile(module, typeRef, out var typeHandle)) {
 					ICompilation compilation = typeHandle.Kind == HandleKind.ExportedType
@@ -452,6 +456,16 @@ namespace ICSharpCode.ILSpy
 		
 		bool FormatExceptions(App.ExceptionData[] exceptions, ITextOutput output)
 		{
+			var stringBuilder = new StringBuilder();
+			var result = FormatExceptions(exceptions, stringBuilder);
+			if (result) {
+				output.Write(stringBuilder.ToString());
+			}
+			return result;
+		}
+
+		internal static bool FormatExceptions(App.ExceptionData[] exceptions, StringBuilder output)
+		{
 			if (exceptions.Length == 0) return false;
 			bool first = true;
 			
@@ -459,16 +473,16 @@ namespace ICSharpCode.ILSpy
 				if (first)
 					first = false;
 				else
-					output.WriteLine("-------------------------------------------------");
-				output.WriteLine("Error(s) loading plugin: " + item.PluginName);
+					output.AppendLine("-------------------------------------------------");
+				output.AppendLine("Error(s) loading plugin: " + item.PluginName);
 				if (item.Exception is System.Reflection.ReflectionTypeLoadException) {
 					var e = (System.Reflection.ReflectionTypeLoadException)item.Exception;
 					foreach (var ex in e.LoaderExceptions) {
-						output.WriteLine(ex.ToString());
-						output.WriteLine();
+						output.AppendLine(ex.ToString());
+						output.AppendLine();
 					}
 				} else
-					output.WriteLine(item.Exception.ToString());
+					output.AppendLine(item.Exception.ToString());
 			}
 			
 			return true;
@@ -479,6 +493,11 @@ namespace ICSharpCode.ILSpy
 		
 		public void ShowMessageIfUpdatesAvailableAsync(ILSpySettings spySettings, bool forceCheck = false)
 		{
+			// Don't check for updates if we're in an MSIX since they work differently
+			if(WindowsVersionHelper.HasPackageIdentity) {
+				return;
+			}
+
 			Task<string> result;
 			if (forceCheck) {
 				result = AboutPage.CheckForUpdatesAsync(spySettings);
@@ -879,18 +898,18 @@ namespace ICSharpCode.ILSpy
 			}
 			decompilationTask = decompilerTextView.DecompileAsync(this.CurrentLanguage, this.SelectedNodes, new DecompilationOptions() { TextViewState = state });
 		}
-		
+
+		void SaveCommandCanExecute(object sender, CanExecuteRoutedEventArgs e)
+		{
+			e.Handled = true;
+			e.CanExecute = SaveCodeContextMenuEntry.CanExecute(SelectedNodes.ToList());
+		}
+
 		void SaveCommandExecuted(object sender, ExecutedRoutedEventArgs e)
 		{
-			if (this.SelectedNodes.Count() == 1) {
-				if (this.SelectedNodes.Single().Save(this.TextView))
-					return;
-			}
-			this.TextView.SaveToDisk(this.CurrentLanguage,
-				this.SelectedNodes,
-				new DecompilationOptions() { FullDecompilation = true });
+			SaveCodeContextMenuEntry.Execute(SelectedNodes.ToList());
 		}
-		
+
 		public void RefreshDecompiledView()
 		{
 			try {
