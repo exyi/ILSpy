@@ -70,7 +70,7 @@ namespace ICSharpCode.Decompiler.IL
 		/// Gets the scope in which the local function is declared.
 		/// Returns null, if this is not a local function.
 		/// </summary>
-		public BlockContainer DeclarationScope { get; internal set; }
+		public BlockContainer DeclarationScope { get; set; }
 
 		/// <summary>
 		/// List of warnings of ILReader.
@@ -111,7 +111,7 @@ namespace ICSharpCode.Decompiler.IL
 		/// <summary>
 		/// If this function is a local function, this field stores the reduced version of the function.
 		/// </summary>
-		internal TypeSystem.Implementation.LocalFunctionMethod ReducedMethod;
+		public TypeSystem.Implementation.LocalFunctionMethod ReducedMethod;
 
 		internal DebugInfo.AsyncDebugInfo AsyncDebugInfo;
 
