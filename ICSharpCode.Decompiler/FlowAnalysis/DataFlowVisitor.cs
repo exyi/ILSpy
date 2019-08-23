@@ -748,7 +748,7 @@ namespace ICSharpCode.Decompiler.FlowAnalysis
 
 		protected internal override void VisitILFunction(ILFunction function)
 		{
-			throw new NotImplementedException();
+			// throw new NotImplementedException();
 		}
 	}
 }
