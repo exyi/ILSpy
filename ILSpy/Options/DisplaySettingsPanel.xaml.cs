@@ -134,6 +134,7 @@ namespace ICSharpCode.ILSpy.Options
 			section.SetAttributeValue("SortResults", s.SortResults);
 			section.SetAttributeValue("FoldBraces", s.FoldBraces);
 			section.SetAttributeValue("ExpandMemberDefinitions", s.ExpandMemberDefinitions);
+			section.SetAttributeValue("ExpandUsingDeclarations", s.ExpandUsingDeclarations);
 			section.SetAttributeValue("IndentationUseTabs", s.IndentationUseTabs);
 			section.SetAttributeValue("IndentationSize", s.IndentationSize);
 			section.SetAttributeValue("IndentationTabSize", s.IndentationTabSize);
@@ -162,6 +163,12 @@ namespace ICSharpCode.ILSpy.Options
 			var text = (string)e.SourceDataObject.GetData(DataFormats.UnicodeText, true) ?? string.Empty;
 			if (!text.All(char.IsDigit))
 				e.CancelCommand();
+		}
+
+		public void LoadDefaults()
+		{
+			currentDisplaySettings = new DisplaySettings();
+			this.DataContext = currentDisplaySettings;
 		}
 	}
 

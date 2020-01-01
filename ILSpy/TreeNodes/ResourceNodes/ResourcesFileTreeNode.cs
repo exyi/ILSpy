@@ -29,6 +29,7 @@ using ICSharpCode.ILSpy.Controls;
 using ICSharpCode.ILSpy.TextView;
 using Microsoft.Win32;
 using ICSharpCode.ILSpy.Properties;
+using ICSharpCode.ILSpy.ViewModels;
 
 namespace ICSharpCode.ILSpy.TreeNodes
 {
@@ -60,9 +61,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 			this.LazyLoading = true;
 		}
 
-		public override object Icon {
-			get { return Images.ResourceResourcesFile; }
-		}
+		public override object Icon => Images.ResourceResourcesFile;
 
 		protected override void LoadChildren()
 		{
@@ -107,7 +106,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 			}
 		}
 
-		public override bool Save(DecompilerTextView textView)
+		public override bool Save(TabPageModel tabPage)
 		{
 			Stream s = Resource.TryOpenStream();
 			if (s == null) return false;
@@ -124,7 +123,8 @@ namespace ICSharpCode.ILSpy.TreeNodes
 						break;
 					case 2:
 						try {
-							using (var writer = new ResXResourceWriter(dlg.OpenFile())) {
+							using (var fs = dlg.OpenFile())
+							using (var writer = new ResXResourceWriter(fs)) {
 								foreach (var entry in new ResourcesFile(s)) {
 									writer.AddResource(entry.Key, entry.Value);
 								}
@@ -145,12 +145,13 @@ namespace ICSharpCode.ILSpy.TreeNodes
 		{
 			EnsureLazyChildren();
 			base.Decompile(language, output, options);
+			var textView = (DecompilerTextView)Docking.DockWorkspace.Instance.ActiveTabPage.Content;
 			if (stringTableEntries.Count != 0) {
 				ISmartTextOutput smartOutput = output as ISmartTextOutput;
 				if (null != smartOutput) {
 					smartOutput.AddUIElement(
 						delegate {
-							return new ResourceStringTable(stringTableEntries, MainWindow.Instance.mainPane);
+							return new ResourceStringTable(stringTableEntries, textView);
 						}
 					);
 				}
@@ -162,7 +163,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 				if (null != smartOutput) {
 					smartOutput.AddUIElement(
 						delegate {
-							return new ResourceObjectTable(otherEntries, MainWindow.Instance.mainPane);
+							return new ResourceObjectTable(otherEntries, textView);
 						}
 					);
 				}

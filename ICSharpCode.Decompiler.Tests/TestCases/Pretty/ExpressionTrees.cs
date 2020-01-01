@@ -1026,11 +1026,19 @@ namespace ICSharpCode.Decompiler.Tests.TestCases.Pretty
 			});
 		}
 
+		public static void StringConcat()
+		{
+			Test<Func<string, object, string>>(null, (string a, object b) => a + b);
+			Test<Func<string, object, string>>(null, (string a, object b) => a + b.ToString());
+			Test<Func<string, int, string>>(null, (string a, int b) => a + b);
+			Test<Func<string, int, string>>(null, (string a, int b) => a + b.ToString());
+		}
+
 		public async Task Issue1524(string str)
 		{
 			await Task.Delay(100);
 			if (string.IsNullOrEmpty(str)) {
-#if ROSLYN
+#if CS70
 				if (int.TryParse(str, out int id)) {
 #else
 				int id;
@@ -1041,6 +1049,12 @@ namespace ICSharpCode.Decompiler.Tests.TestCases.Pretty
 						select a).FirstOrDefault();
 				}
 			}
+		}
+
+		public void NullCoalescing()
+		{
+			Test<Func<string, string, string>>((string a, string b) => a ?? b, (string a, string b) => a ?? b);
+			Test<Func<int?, int>>((int? a) => a ?? 1, (int? a) => a ?? 1);
 		}
 	}
 

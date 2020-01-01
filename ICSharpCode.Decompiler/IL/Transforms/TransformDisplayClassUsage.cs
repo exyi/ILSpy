@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using ICSharpCode.Decompiler.TypeSystem;
+using ICSharpCode.Decompiler.Util;
 
 namespace ICSharpCode.Decompiler.IL.Transforms
 {
@@ -37,26 +38,20 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 			public ILInstruction Initializer;
 			public ILVariable Variable;
 			public ITypeDefinition Definition;
-			public Dictionary<IField, DisplayClassVariable> Variables;
+			public Dictionary<IField, ILVariable> Variables;
 			public BlockContainer CaptureScope;
 			public ILFunction DeclaringFunction;
 		}
 
-		struct DisplayClassVariable
-		{
-			public ILVariable Variable;
-			public ILInstruction Value;
-		}
-
 		ILTransformContext context;
-		ILFunction currentFunction;
 		readonly Dictionary<ILVariable, DisplayClass> displayClasses = new Dictionary<ILVariable, DisplayClass>();
 		readonly List<ILInstruction> instructionsToRemove = new List<ILInstruction>();
+		readonly MultiDictionary<IField, StObj> fieldAssignmentsWithVariableValue = new MultiDictionary<IField, StObj>();
 
 		public void Run(ILFunction function, ILTransformContext context)
 		{
 			try {
-				if (this.context != null || this.currentFunction != null)
+				if (this.context != null)
 					throw new InvalidOperationException("Reentrancy in " + nameof(TransformDisplayClassUsage));
 				this.context = context;
 				var decompilationContext = new SimpleTypeResolveContext(context.Function.Method);
@@ -64,21 +59,23 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 				// Inner functions are transformed before outer functions
 				foreach (var f in function.Descendants.OfType<ILFunction>()) {
 					foreach (var v in f.Variables.ToArray()) {
-						if (HandleMonoStateMachine(function, v, decompilationContext, f))
+						if (context.Settings.YieldReturn && HandleMonoStateMachine(function, v, decompilationContext, f))
 							continue;
-						if (IsClosure(v, out ITypeDefinition closureType, out var inst)) {
+						if ((context.Settings.AnonymousMethods || context.Settings.ExpressionTrees) && IsClosure(context, v, out ITypeDefinition closureType, out var inst)) {
+							if (!CanRemoveAllReferencesTo(context, v))
+								continue;
+							instructionsToRemove.Add(inst);
 							AddOrUpdateDisplayClass(f, v, closureType, inst, localFunctionClosureParameter: false);
+							continue;
 						}
 						if (context.Settings.LocalFunctions && f.Kind == ILFunctionKind.LocalFunction && v.Kind == VariableKind.Parameter && v.Index > -1 && f.Method.Parameters[v.Index.Value] is IParameter p && LocalFunctionDecompiler.IsClosureParameter(p, decompilationContext)) {
 							AddOrUpdateDisplayClass(f, v, ((ByReferenceType)p.Type).ElementType.GetDefinition(), f.Body, localFunctionClosureParameter: true);
+							continue;
 						}
-					}
-					foreach (var displayClass in displayClasses.Values.OrderByDescending(d => d.Initializer.StartILOffset).ToArray()) {
-						context.Step($"Transform references to " + displayClass.Variable, displayClass.Initializer);
-						this.currentFunction = f;
-						VisitILFunction(f);
+						AnalyzeUseSites(v);
 					}
 				}
+				VisitILFunction(function);
 				if (instructionsToRemove.Count > 0) {
 					context.Step($"Remove instructions", function);
 					foreach (var store in instructionsToRemove) {
@@ -90,8 +87,42 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 			} finally {
 				instructionsToRemove.Clear();
 				displayClasses.Clear();
+				fieldAssignmentsWithVariableValue.Clear();
 				this.context = null;
-				this.currentFunction = null;
+			}
+		}
+
+		private bool CanRemoveAllReferencesTo(ILTransformContext context, ILVariable v)
+		{
+			foreach (var use in v.LoadInstructions) {
+				if (use.Parent.MatchStLoc(out var targetVar) && !IsClosure(context, targetVar, out _, out _)) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		private void AnalyzeUseSites(ILVariable v)
+		{
+			foreach (var use in v.LoadInstructions) {
+				if (!(use.Parent?.Parent is Block))
+					continue;
+				if (use.Parent.MatchStFld(out _, out var f, out var value) && value == use) {
+					fieldAssignmentsWithVariableValue.Add(f, (StObj)use.Parent);
+				}
+				if (use.Parent.MatchStsFld(out f, out value) && value == use) {
+					fieldAssignmentsWithVariableValue.Add(f, (StObj)use.Parent);
+				}
+			}
+			foreach (var use in v.AddressInstructions) {
+				if (!(use.Parent?.Parent is Block))
+					continue;
+				if (use.Parent.MatchStFld(out _, out var f, out var value) && value == use) {
+					fieldAssignmentsWithVariableValue.Add(f, (StObj)use.Parent);
+				}
+				if (use.Parent.MatchStsFld(out f, out value) && value == use) {
+					fieldAssignmentsWithVariableValue.Add(f, (StObj)use.Parent);
+				}
 			}
 		}
 
@@ -106,7 +137,7 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 					Initializer = inst,
 					Variable = v,
 					Definition = closureType,
-					Variables = new Dictionary<IField, DisplayClassVariable>(),
+					Variables = new Dictionary<IField, ILVariable>(),
 					CaptureScope = (isMono && IsMonoNestedCaptureScope(closureType)) || localFunctionClosureParameter ? null : v.CaptureScope,
 					DeclaringFunction = localFunctionClosureParameter ? f.DeclarationScope.Ancestors.OfType<ILFunction>().First() : f
 				});
@@ -122,38 +153,32 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 			}
 		}
 
-		bool IsClosure(ILVariable variable, out ITypeDefinition closureType, out ILInstruction initializer)
+		internal static bool IsClosure(ILTransformContext context, ILVariable variable, out ITypeDefinition closureType, out ILInstruction initializer)
 		{
 			closureType = null;
 			initializer = null;
 			if (variable.IsSingleDefinition && variable.StoreInstructions.SingleOrDefault() is StLoc inst) {
 				initializer = inst;
-				if (IsClosureInit(inst, out closureType)) {
-					instructionsToRemove.Add(inst);
+				if (IsClosureInit(context, inst, out closureType)) {
 					return true;
 				}
 			}
 			closureType = variable.Type.GetDefinition();
-			if (context.Settings.LocalFunctions && closureType?.Kind == TypeKind.Struct && variable.HasInitialValue && IsPotentialClosure(this.context, closureType)) {
+			if (context.Settings.LocalFunctions && closureType?.Kind == TypeKind.Struct && variable.HasInitialValue && IsPotentialClosure(context, closureType)) {
 				initializer = LocalFunctionDecompiler.GetStatement(variable.AddressInstructions.OrderBy(i => i.StartILOffset).First());
 				return true;
 			}
 			return false;
 		}
 
-		bool IsClosureInit(StLoc inst, out ITypeDefinition closureType)
+		static bool IsClosureInit(ILTransformContext context, StLoc inst, out ITypeDefinition closureType)
 		{
 			if (inst.Value is NewObj newObj) {
 				closureType = newObj.Method.DeclaringTypeDefinition;
-				return closureType != null && IsPotentialClosure(this.context, newObj);
+				return closureType != null && IsPotentialClosure(context, newObj);
 			}
 			closureType = null;
 			return false;
-		}
-
-		bool IsOuterClosureReference(IField field)
-		{
-			return displayClasses.Values.Any(disp => disp.Definition == field.DeclaringTypeDefinition);
 		}
 
 		bool IsMonoNestedCaptureScope(ITypeDefinition closureType)
@@ -181,17 +206,14 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 				Initializer = nestedFunction.Body,
 				Variable = thisVariable,
 				Definition = thisVariable.Type.GetDefinition(),
-				Variables = new Dictionary<IField, DisplayClassVariable>(),
+				Variables = new Dictionary<IField, ILVariable>(),
 				CaptureScope = (BlockContainer)nestedFunction.Body
 			};
 			displayClasses.Add(thisVariable, displayClass);
 			foreach (var stateMachineVariable in nestedFunction.Variables) {
 				if (stateMachineVariable.StateMachineField == null || displayClass.Variables.ContainsKey(stateMachineVariable.StateMachineField))
 					continue;
-				displayClass.Variables.Add(stateMachineVariable.StateMachineField, new DisplayClassVariable {
-					Variable = stateMachineVariable,
-					Value = new LdLoc(stateMachineVariable)
-				});
+				displayClass.Variables.Add(stateMachineVariable.StateMachineField, stateMachineVariable);
 			}
 			if (!currentFunction.Method.IsStatic && FindThisField(out var thisField)) {
 				var thisVar = currentFunction.Variables
@@ -200,7 +222,7 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 					thisVar = new ILVariable(VariableKind.Parameter, decompilationContext.CurrentTypeDefinition, -1) { Name = "this" };
 					currentFunction.Variables.Add(thisVar);
 				}
-				displayClass.Variables.Add(thisField, new DisplayClassVariable { Variable = thisVar, Value = new LdLoc(thisVar) });
+				displayClass.Variables.Add(thisField, thisVar);
 			}
 			return true;
 
@@ -263,11 +285,17 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 			return true;
 		}
 
-		bool IsDisplayClassLoad(ILInstruction target, out ILVariable variable)
+		ILFunction currentFunction;
+
+		protected internal override void VisitILFunction(ILFunction function)
 		{
-			if (target.MatchLdLoc(out variable) || target.MatchLdLoca(out variable))
-				return true;
-			return false;
+			var oldFunction = this.currentFunction;
+			try {
+				this.currentFunction = function;
+				base.VisitILFunction(function);
+			} finally {
+				this.currentFunction = oldFunction;
+			}
 		}
 
 		protected override void Default(ILInstruction inst)
@@ -280,105 +308,113 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 		protected internal override void VisitStLoc(StLoc inst)
 		{
 			base.VisitStLoc(inst);
-			// Sometimes display class references are copied into other local variables.
-			// We remove the assignment and store the relationship between the display class and the variable in the
-			// displayClasses dictionary.
-			if (inst.Value.MatchLdLoc(out var closureVariable) && displayClasses.TryGetValue(closureVariable, out var displayClass)) {
-				displayClasses[inst.Variable] = displayClass;
-				instructionsToRemove.Add(inst);
-			} else if (inst.Variable.Kind == VariableKind.Local && inst.Variable.IsSingleDefinition && inst.Variable.LoadCount == 0 && inst.Value is StLoc) {
+
+			if (inst.Variable.Kind == VariableKind.Local && inst.Variable.IsSingleDefinition && inst.Variable.LoadCount == 0 && inst.Value is StLoc) {
+				context.Step($"Remove unused variable assignment {inst.Variable.Name}", inst);
 				inst.ReplaceWith(inst.Value);
 			}
 		}
 
 		protected internal override void VisitStObj(StObj inst)
 		{
-			base.VisitStObj(inst);
-			// This instruction has been marked deletable, do not transform it further
-			if (instructionsToRemove.Contains(inst))
-				return;
-			// The target of the store instruction must be a field reference
-			if (!inst.Target.MatchLdFlda(out ILInstruction target, out IField field))
-				return;
-			// Get display class info
-			if (!IsDisplayClassLoad(target, out var displayClassLoad) || !displayClasses.TryGetValue(displayClassLoad, out var displayClass))
-				return;
-			field = (IField)field.MemberDefinition;
-			if (displayClass.Variables.TryGetValue(field, out DisplayClassVariable info)) {
-				// If the display class field was previously initialized, we use a simple assignment.
-				inst.ReplaceWith(new StLoc(info.Variable, inst.Value).WithILRange(inst));
-			} else {
-				// This is an uninitialized variable:
-				ILInstruction value;
-				if (inst.Value.MatchLdLoc(out var v) && v.Kind == VariableKind.Parameter && currentFunction == v.Function) {
-					// Special case for parameters: remove copies of parameter values.
+			inst.Value.AcceptVisitor(this);
+			if (inst.Parent is Block) {
+				if (IsParameterAssignment(inst, out var displayClass, out var field, out var parameter)) {
+					context.Step($"Detected parameter assignment {parameter.Name}", inst);
+					displayClass.Variables.Add((IField)field.MemberDefinition, parameter);
 					instructionsToRemove.Add(inst);
-					value = inst.Value;
-				} else {
-					context.Step($"Introduce captured variable for {field.FullName}", inst);
-					Debug.Assert(displayClass.Definition == field.DeclaringTypeDefinition);
-					// Introduce a fresh variable for the display class field.
-					if (displayClass.IsMono && displayClass.CaptureScope == null && !IsOuterClosureReference(field)) {
-						displayClass.CaptureScope = BlockContainer.FindClosestContainer(inst);
-					}
-					v = displayClass.DeclaringFunction.RegisterVariable(VariableKind.Local, field.Type, field.Name);
-					v.HasInitialValue = true;
-					v.CaptureScope = displayClass.CaptureScope;
-					inst.ReplaceWith(new StLoc(v, inst.Value).WithILRange(inst));
-					value = new LdLoc(v);
+					return;
 				}
-				displayClass.Variables.Add(field, new DisplayClassVariable { Value = value, Variable = v });
+				if (IsDisplayClassAssignment(inst, out displayClass, out field, out var variable)) {
+					context.Step($"Detected display-class assignment {variable.Name}", inst);
+					displayClass.Variables.Add((IField)field.MemberDefinition, variable);
+					instructionsToRemove.Add(inst);
+					return;
+				}
 			}
+			inst.Target.AcceptVisitor(this);
+			EarlyExpressionTransforms.StObjToStLoc(inst, context);
 		}
 
 		protected internal override void VisitLdObj(LdObj inst)
 		{
 			base.VisitLdObj(inst);
-			// The target of the store instruction must be a field reference
-			if (!inst.Target.MatchLdFlda(out var target, out IField field))
-				return;
-			// Get display class info
-			if (!IsDisplayClassLoad(target, out var displayClassLoad) || !displayClasses.TryGetValue(displayClassLoad, out var displayClass))
-				return;
-			// Get display class variable info
-			if (!displayClass.Variables.TryGetValue((IField)field.MemberDefinition, out DisplayClassVariable info))
-				return;
-			// Replace usage of display class field with the variable.
-			var replacement = info.Value.Clone();
-			replacement.SetILRange(inst);
-			inst.ReplaceWith(replacement);
+			EarlyExpressionTransforms.LdObjToLdLoc(inst, context);
+		}
+
+		private bool IsDisplayClassLoad(ILInstruction target, out ILVariable variable)
+		{
+			// We cannot use MatchLdLocRef here because local functions use ref parameters
+			if (target.MatchLdLoc(out variable) || target.MatchLdLoca(out variable))
+				return true;
+			return false;
+		}
+
+		private bool IsDisplayClassAssignment(StObj inst, out DisplayClass displayClass, out IField field, out ILVariable variable)
+		{
+			variable = null;
+			if (!IsDisplayClassFieldAccess(inst.Target, out var displayClassVar, out displayClass, out field))
+				return false;
+			if (!(inst.Value.MatchLdLoc(out var v) && displayClasses.ContainsKey(v)))
+				return false;
+			if (displayClassVar.Function != currentFunction)
+				return false;
+			variable = v;
+			return true;
+		}
+
+		private bool IsParameterAssignment(StObj inst, out DisplayClass displayClass, out IField field, out ILVariable parameter)
+		{
+			parameter = null;
+			if (!IsDisplayClassFieldAccess(inst.Target, out var displayClassVar, out displayClass, out field))
+				return false;
+			if (fieldAssignmentsWithVariableValue[field].Count != 1)
+				return false;
+			if (!(inst.Value.MatchLdLoc(out var v) && v.Kind == VariableKind.Parameter && v.Function == currentFunction && v.Type.Equals(field.Type)))
+				return false;
+			if (displayClass.Variables.ContainsKey((IField)field.MemberDefinition))
+				return false;
+			if (displayClassVar.Function != currentFunction)
+				return false;
+			parameter = v;
+			return true;
+		}
+
+		private bool IsDisplayClassFieldAccess(ILInstruction inst, out ILVariable displayClassVar, out DisplayClass displayClass, out IField field)
+		{
+			displayClass = null;
+			displayClassVar = null;
+			field = null;
+			if (!(inst is LdFlda ldflda))
+				return false;
+			field = ldflda.Field;
+			return IsDisplayClassLoad(ldflda.Target, out displayClassVar)
+				&& displayClasses.TryGetValue(displayClassVar, out displayClass);
 		}
 
 		protected internal override void VisitLdFlda(LdFlda inst)
 		{
 			base.VisitLdFlda(inst);
-			// TODO : Figure out why this was added in https://github.com/icsharpcode/ILSpy/pull/1303
-			if (inst.Target.MatchLdThis() && inst.Field.Name == "$this"
-				&& inst.Field.MemberDefinition.ReflectionName.Contains("c__Iterator")) {
-				//Debug.Assert(false, "This should not be executed!");
-				var variable = currentFunction.Variables.First((f) => f.Index == -1);
-				inst.ReplaceWith(new LdLoca(variable).WithILRange(inst));
-			}
-			// Skip stfld/ldfld
-			if (inst.Parent is LdObj || inst.Parent is StObj)
-				return;
 			// Get display class info
-			if (!IsDisplayClassLoad(inst.Target, out var displayClassLoad) || !displayClasses.TryGetValue(displayClassLoad, out var displayClass))
+			if (!IsDisplayClassFieldAccess(inst, out _, out DisplayClass displayClass, out IField field))
 				return;
-			var field = (IField)inst.Field.MemberDefinition;
-			if (!displayClass.Variables.TryGetValue(field, out DisplayClassVariable info)) {
+			// We want the specialized version, so that display-class type parameters are
+			// substituted with the type parameters from the use-site.
+			var fieldType = field.Type;
+			// However, use the unspecialized member definition to make reference comparisons in dictionary possible.
+			field = (IField)field.MemberDefinition;
+			if (!displayClass.Variables.TryGetValue(field, out var v)) {
 				context.Step($"Introduce captured variable for {field.FullName}", inst);
 				// Introduce a fresh variable for the display class field.
 				Debug.Assert(displayClass.Definition == field.DeclaringTypeDefinition);
-				var v = displayClass.DeclaringFunction.RegisterVariable(VariableKind.Local, field.Type, field.Name);
+				v = displayClass.DeclaringFunction.RegisterVariable(VariableKind.Local, fieldType, field.Name);
 				v.HasInitialValue = true;
 				v.CaptureScope = displayClass.CaptureScope;
 				inst.ReplaceWith(new LdLoca(v).WithILRange(inst));
-				displayClass.Variables.Add(field, new DisplayClassVariable { Value = new LdLoc(v), Variable = v });
-			} else if (info.Value is LdLoc l) {
-				inst.ReplaceWith(new LdLoca(l.Variable).WithILRange(inst));
+				displayClass.Variables.Add(field, v);
 			} else {
-				Debug.Fail("LdFlda pattern not supported!");
+				context.Step($"Reuse captured variable {v.Name} for {field.FullName}", inst);
+				inst.ReplaceWith(new LdLoca(v).WithILRange(inst));
 			}
 		}
 	}

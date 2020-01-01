@@ -19,6 +19,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -37,10 +38,11 @@ namespace ICSharpCode.Decompiler.Metadata
 	/// </summary>
 	/// <remarks>
 	/// In addition to wrapping a <c>System.Reflection.Metadata.PEReader</c>, this class
-	/// contains a few decompiled-specific caches to allow efficiently constructing a type
+	/// contains a few decompiler-specific caches to allow efficiently constructing a type
 	/// system from multiple PEFiles. This allows the caches to be shared across multiple
 	/// decompiled type systems.
 	/// </remarks>
+	[DebuggerDisplay("{FileName}")]
 	public class PEFile : IDisposable, TypeSystem.IModuleReference
 	{
 		public string FileName { get; }
@@ -86,7 +88,6 @@ namespace ICSharpCode.Decompiler.Metadata
 				default:
 					return TargetRuntime.Unknown;
 			}
-
 		}
 
 		string GetName()

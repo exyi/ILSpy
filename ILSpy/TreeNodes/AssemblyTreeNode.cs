@@ -32,6 +32,7 @@ using Microsoft.Win32;
 using ICSharpCode.Decompiler.TypeSystem;
 using TypeDefinitionHandle = System.Reflection.Metadata.TypeDefinitionHandle;
 using ICSharpCode.ILSpy.Properties;
+using ICSharpCode.ILSpy.ViewModels;
 
 namespace ICSharpCode.ILSpy.TreeNodes
 {
@@ -72,7 +73,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 				if (LoadedAssembly.IsLoaded) {
 					return LoadedAssembly.HasLoadError ? Images.AssemblyWarning : Images.Assembly;
 				} else {
-					return Images.AssemblyLoading;
+					return Images.FindAssembly;
 				}
 			}
 		}
@@ -126,8 +127,6 @@ namespace ICSharpCode.ILSpy.TreeNodes
 			RaisePropertyChanged("Tooltip");
 			if (moduleTask.IsFaulted) {
 				RaisePropertyChanged("ShowExpander"); // cannot expand assemblies with load error
-													  // observe the exception so that the Task's finalizer doesn't re-throw it
-				try { moduleTask.Wait(); } catch (AggregateException) { }
 			} else {
 				RaisePropertyChanged("Text"); // shortname might have changed
 			}
@@ -143,7 +142,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 			typeSystem = LoadedAssembly.GetTypeSystemOrNull();
 			var assembly = (MetadataModule)typeSystem.MainModule;
 			var metadata = module.Metadata;
-
+			this.Children.Add(new Metadata.MetadataTreeNode(module, this));
 			this.Children.Add(new ReferenceFolderTreeNode(module, this));
 			if (module.Resources.Any())
 				this.Children.Add(new ResourceListTreeNode(module));
@@ -276,7 +275,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 			language.DecompileAssembly(LoadedAssembly, output, options);
 		}
 
-		public override bool Save(DecompilerTextView textView)
+		public override bool Save(TabPageModel tabPage)
 		{
 			Language language = this.Language;
 			if (string.IsNullOrEmpty(language.ProjectFileExtension))
@@ -301,7 +300,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 						}
 					}
 				}
-				textView.SaveToDisk(language, new[] { this }, options, dlg.FileName);
+				tabPage.ShowTextView(textView => textView.SaveToDisk(language, new[] { this }, options, dlg.FileName));
 			}
 			return true;
 		}
@@ -314,7 +313,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 		}
 	}
 
-	[ExportContextMenuEntry(Header = nameof(Resources._Remove), Icon = "images/Delete.png")]
+	[ExportContextMenuEntry(Header = nameof(Resources._Remove), Icon = "images/Delete")]
 	sealed class RemoveAssembly : IContextMenuEntry
 	{
 		public bool IsVisible(TextViewContext context)
@@ -339,7 +338,7 @@ namespace ICSharpCode.ILSpy.TreeNodes
 		}
 	}
 
-	[ExportContextMenuEntry(Header = nameof(Resources._Reload), Icon = "images/Refresh.png")]
+	[ExportContextMenuEntry(Header = nameof(Resources._Reload), Icon = "images/Refresh")]
 	sealed class ReloadAssembly : IContextMenuEntry
 	{
 		public bool IsVisible(TextViewContext context)

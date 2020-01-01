@@ -98,7 +98,7 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 		public override AstNode VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration)
 		{
 			if (context.Settings.AutomaticProperties) {
-				AstNode result = TransformAutomaticProperties(propertyDeclaration);
+				AstNode result = TransformAutomaticProperty(propertyDeclaration);
 				if (result != null)
 					return result;
 			}
@@ -165,6 +165,8 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 
 		public ForStatement TransformFor(ExpressionStatement node)
 		{
+			if (!context.Settings.ForStatement)
+				return null;
 			Match m1 = variableAssignPattern.Match(node);
 			if (!m1.Success) return null;
 			var variable = m1.Get<IdentifierExpression>("variable").Single().GetILVariable();
@@ -554,10 +556,25 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 			}
 		};
 
-		PropertyDeclaration TransformAutomaticProperties(PropertyDeclaration propertyDeclaration)
+		bool CanTransformToAutomaticProperty(IProperty property)
+		{
+			if (!property.CanGet)
+				return false;
+			if (!property.Getter.IsCompilerGenerated())
+				return false;
+			if (property.Setter is IMethod setter) {
+				if (!setter.IsCompilerGenerated())
+					return false;
+				if (setter.HasReadonlyModifier())
+					return false;
+			}
+			return true;
+		}
+
+		PropertyDeclaration TransformAutomaticProperty(PropertyDeclaration propertyDeclaration)
 		{
 			IProperty property = propertyDeclaration.GetSymbol() as IProperty;
-			if (!property.CanGet || (!property.Getter.IsCompilerGenerated() && (property.Setter?.IsCompilerGenerated() == false)))
+			if (!CanTransformToAutomaticProperty(property))
 				return null;
 			IField field = null;
 			Match m = automaticPropertyPattern.Match(propertyDeclaration);
@@ -571,11 +588,14 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 			}
 			if (field == null)
 				return null;
+			if (propertyDeclaration.Setter.HasModifier(Modifiers.Readonly))
+				return null;
 			if (field.IsCompilerGenerated() && field.DeclaringTypeDefinition == property.DeclaringTypeDefinition) {
 				RemoveCompilerGeneratedAttribute(propertyDeclaration.Getter.Attributes);
 				RemoveCompilerGeneratedAttribute(propertyDeclaration.Setter.Attributes);
 				propertyDeclaration.Getter.Body = null;
 				propertyDeclaration.Setter.Body = null;
+				propertyDeclaration.Getter.Modifiers &= ~Modifiers.Readonly;
 
 				// Add C# 7.3 attributes on backing field:
 				var attributes = field.GetAttributes()
@@ -649,14 +669,12 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 				var parent = identifier.Parent;
 				var mrr = parent.Annotation<MemberResolveResult>();
 				var field = mrr?.Member as IField;
-				if (field != null && field.IsCompilerGenerated()) {
-					var propertyName = identifier.Name.Substring(1, identifier.Name.Length - 1 - ">k__BackingField".Length);
-					var property = field.DeclaringTypeDefinition.GetProperties(p => p.Name == propertyName, GetMemberOptions.IgnoreInheritedMembers).FirstOrDefault();
-					if (property != null) {
-						parent.RemoveAnnotations<MemberResolveResult>();
-						parent.AddAnnotation(new MemberResolveResult(mrr.TargetResult, property));
-						return Identifier.Create(propertyName);
-					}
+				if (field != null && IsBackingFieldOfAutomaticProperty(field, out var property)
+					&& CanTransformToAutomaticProperty(property) && currentMethod.AccessorOwner != property)
+				{
+					parent.RemoveAnnotations<MemberResolveResult>();
+					parent.AddAnnotation(new MemberResolveResult(mrr.TargetResult, property));
+					return Identifier.Create(property.Name);
 				}
 			}
 			return null;
@@ -670,7 +688,7 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 			if (field == null)
 				return null;
 			var @event = field.DeclaringType.GetEvents(ev => ev.Name == field.Name, GetMemberOptions.IgnoreInheritedMembers).SingleOrDefault();
-			if (@event != null) {
+			if (@event != null && currentMethod.AccessorOwner != @event) {
 				parent.RemoveAnnotations<MemberResolveResult>();
 				parent.AddAnnotation(new MemberResolveResult(mrr.TargetResult, @event));
 				return identifier;
@@ -794,16 +812,11 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 				default:
 					return false;
 			}
-			if (!ev.ReturnType.IsMatch(m.Get("type").Single())) {
-				// Variable types must match event type,
-				// except that the event type may have an additional nullability annotation
-				if (ev.ReturnType is ComposedType ct && ct.HasOnlyNullableSpecifier) {
-					if (!ct.BaseType.IsMatch(m.Get("type").Single()))
-						return false;
-				} else {
-					return false;
-				}
-			}
+			var returnType = ev.ReturnType.GetResolveResult().Type;
+			var eventType = m.Get<AstType>("type").Single().GetResolveResult().Type;
+			// ignore tuple element names, dynamic and nullability
+			if (!NormalizeTypeVisitor.TypeErasure.EquivalentTypes(returnType, eventType))
+				return false;
 			var combineMethod = m.Get<AstNode>("delegateCombine").Single().Parent.GetSymbol() as IMethod;
 			if (combineMethod == null || combineMethod.Name != (isAddAccessor ? "Combine" : "Remove"))
 				return false;
@@ -873,9 +886,8 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 			ed.Modifiers = ev.Modifiers;
 			ed.Variables.Add(new VariableInitializer(ev.Name));
 			ed.CopyAnnotationsFrom(ev);
-			
-			IEvent eventDef = ev.GetSymbol() as IEvent;
-			if (eventDef != null) {
+
+			if (ev.GetSymbol() is IEvent eventDef) {
 				IField field = eventDef.DeclaringType.GetFields(f => f.Name == ev.Name, GetMemberOptions.IgnoreInheritedMembers).SingleOrDefault();
 				if (field != null) {
 					ed.AddAnnotation(field);
@@ -891,7 +903,7 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 					}
 				}
 			}
-			
+
 			ev.ReplaceWith(ed);
 			return ed;
 		}
@@ -1022,6 +1034,29 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 					break;
 			}
 			return base.VisitBinaryOperatorExpression(expr);
+		}
+		#endregion
+
+		#region C# 7.3 pattern based fixed
+		static readonly Expression addressOfPinnableReference = new UnaryOperatorExpression {
+			Operator = UnaryOperatorType.AddressOf,
+			Expression = new InvocationExpression {
+				Target = new MemberReferenceExpression(new AnyNode("target"), "GetPinnableReference"),
+				Arguments = { }
+			}
+		};
+
+		public override AstNode VisitFixedStatement(FixedStatement fixedStatement)
+		{
+			if (context.Settings.PatternBasedFixedStatement) {
+				foreach (var v in fixedStatement.Variables) {
+					var m = addressOfPinnableReference.Match(v.Initializer);
+					if (m.Success) {
+						v.Initializer = m.Get<Expression>("target").Single().Detach();
+					}
+				}
+			}
+			return base.VisitFixedStatement(fixedStatement);
 		}
 		#endregion
 	}

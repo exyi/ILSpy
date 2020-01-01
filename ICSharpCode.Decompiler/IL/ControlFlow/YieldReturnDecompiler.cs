@@ -131,7 +131,7 @@ namespace ICSharpCode.Decompiler.IL.ControlFlow
 				AnalyzeCurrentProperty();
 				ResolveIEnumerableIEnumeratorFieldMapping();
 				ConstructExceptionTable();
-				newBody = AnalyzeMoveNext();
+				newBody = AnalyzeMoveNext(function);
 			} catch (SymbolicAnalysisFailedException) {
 				return;
 			}
@@ -305,6 +305,16 @@ namespace ICSharpCode.Decompiler.IL.ControlFlow
 		/// </summary>
 		bool MatchEnumeratorCreationNewObj(ILInstruction inst)
 		{
+			return MatchEnumeratorCreationNewObj(inst, metadata, currentType,
+				out enumeratorCtor, out enumeratorType);
+		}
+
+		internal static bool MatchEnumeratorCreationNewObj(ILInstruction inst, 
+			MetadataReader metadata, TypeDefinitionHandle currentType,
+			out MethodDefinitionHandle enumeratorCtor, out TypeDefinitionHandle enumeratorType)
+		{
+			enumeratorCtor = default;
+			enumeratorType = default;
 			// newobj(CurrentType/...::.ctor, ldc.i4(-2))
 			if (!(inst is NewObj newObj))
 				return false;
@@ -443,6 +453,12 @@ namespace ICSharpCode.Decompiler.IL.ControlFlow
 			MethodDefinitionHandle getEnumeratorMethod = metadata.GetTypeDefinition(enumeratorType).GetMethods().FirstOrDefault(
 				m => metadata.GetString(metadata.GetMethodDefinition(m).Name).StartsWith("System.Collections.Generic.IEnumerable", StringComparison.Ordinal)
 				&& metadata.GetString(metadata.GetMethodDefinition(m).Name).EndsWith(".GetEnumerator", StringComparison.Ordinal));
+			ResolveIEnumerableIEnumeratorFieldMapping(getEnumeratorMethod, context, fieldToParameterMap);
+		}
+
+		internal static void ResolveIEnumerableIEnumeratorFieldMapping(MethodDefinitionHandle getEnumeratorMethod, ILTransformContext context,
+			Dictionary<IField, ILVariable> fieldToParameterMap)
+		{
 			if (getEnumeratorMethod.IsNil)
 				return; // no mappings (maybe it's just an IEnumerator implementation?)
 			var function = CreateILAst(getEnumeratorMethod, context);
@@ -509,11 +525,13 @@ namespace ICSharpCode.Decompiler.IL.ControlFlow
 		#endregion
 
 		#region Analyze MoveNext() and generate new body
-		BlockContainer AnalyzeMoveNext()
+		BlockContainer AnalyzeMoveNext(ILFunction function)
 		{
 			context.StepStartGroup("AnalyzeMoveNext");
 			MethodDefinitionHandle moveNextMethod = metadata.GetTypeDefinition(enumeratorType).GetMethods().FirstOrDefault(m => metadata.GetString(metadata.GetMethodDefinition(m).Name) == "MoveNext");
 			ILFunction moveNextFunction = CreateILAst(moveNextMethod, context);
+
+			function.MoveNextMethod = moveNextFunction.Method;
 
 			// Copy-propagate temporaries holding a copy of 'this'.
 			// This is necessary because the old (pre-Roslyn) C# compiler likes to store 'this' in temporary variables.

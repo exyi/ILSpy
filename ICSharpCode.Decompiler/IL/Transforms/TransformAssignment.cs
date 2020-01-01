@@ -459,6 +459,16 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 				return conv.TargetType != type.ToPrimitiveType();
 			} else if (value is Comp) {
 				return false; // comp returns 0 or 1, which always fits
+			} else if (value is BinaryNumericInstruction bni) {
+				switch (bni.Operator) {
+					case BinaryNumericOperator.BitAnd:
+					case BinaryNumericOperator.BitOr:
+					case BinaryNumericOperator.BitXor:
+						// If both input values fit into the type without truncation,
+						// the result of a binary operator will also fit.
+						return IsImplicitTruncation(bni.Left, type, compilation, allowNullableValue)
+							|| IsImplicitTruncation(bni.Right, type, compilation, allowNullableValue);
+				}
 			} else if (value is IfInstruction ifInst) {
 				return IsImplicitTruncation(ifInst.TrueInst, type, compilation, allowNullableValue)
 					|| IsImplicitTruncation(ifInst.FalseInst, type, compilation, allowNullableValue);
@@ -643,7 +653,7 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 			}
 			StLoc stloc;
 			var binary = UnwrapSmallIntegerConv(value, out var conv) as BinaryNumericInstruction;
-			if (binary != null && binary.Right.MatchLdcI(1)) {
+			if (binary != null && (binary.Right.MatchLdcI(1) || binary.Right.MatchLdcF4(1) || binary.Right.MatchLdcF8(1))) {
 				if (!(binary.Operator == BinaryNumericOperator.Add || binary.Operator == BinaryNumericOperator.Sub))
 					return false;
 				if (!ValidateCompoundAssign(binary, conv, targetType))
@@ -717,7 +727,7 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 				return false;
 			}
 			if (UnwrapSmallIntegerConv(value, out var conv) is BinaryNumericInstruction binary) {
-				if (!binary.Left.MatchLdLoc(tmpVar) || !binary.Right.MatchLdcI(1))
+				if (!binary.Left.MatchLdLoc(tmpVar) || !(binary.Right.MatchLdcI(1) || binary.Right.MatchLdcF4(1) || binary.Right.MatchLdcF8(1)))
 					return false;
 				if (!(binary.Operator == BinaryNumericOperator.Add || binary.Operator == BinaryNumericOperator.Sub))
 					return false;

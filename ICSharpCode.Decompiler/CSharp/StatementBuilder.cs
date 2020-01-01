@@ -28,7 +28,6 @@ using System;
 using System.Threading;
 using ICSharpCode.Decompiler.IL.Transforms;
 using ICSharpCode.Decompiler.CSharp.Syntax.PatternMatching;
-using ICSharpCode.Decompiler.CSharp.Resolver;
 
 namespace ICSharpCode.Decompiler.CSharp
 {
@@ -40,11 +39,18 @@ namespace ICSharpCode.Decompiler.CSharp
 		readonly DecompilerSettings settings;
 		readonly CancellationToken cancellationToken;
 
+		internal BlockContainer currentReturnContainer;
+		internal IType currentResultType;
+		internal bool currentIsIterator;
+
 		public StatementBuilder(IDecompilerTypeSystem typeSystem, ITypeResolveContext decompilationContext, ILFunction currentFunction, DecompilerSettings settings, CancellationToken cancellationToken)
 		{
 			Debug.Assert(typeSystem != null && decompilationContext != null);
-			this.exprBuilder = new ExpressionBuilder(typeSystem, decompilationContext, currentFunction, settings, cancellationToken);
+			this.exprBuilder = new ExpressionBuilder(this, typeSystem, decompilationContext, currentFunction, settings, cancellationToken);
 			this.currentFunction = currentFunction;
+			this.currentReturnContainer = (BlockContainer)currentFunction.Body;
+			this.currentIsIterator = currentFunction.IsIterator;
+			this.currentResultType = currentFunction.IsAsync ? currentFunction.AsyncReturnType : currentFunction.ReturnType;
 			this.typeSystem = typeSystem;
 			this.settings = settings;
 			this.cancellationToken = cancellationToken;
@@ -300,19 +306,17 @@ namespace ICSharpCode.Decompiler.CSharp
 		{
 			if (inst.TargetContainer == breakTarget)
 				return new BreakStatement();
-			if (inst.IsLeavingFunction) {
-				if (currentFunction.IsIterator)
+			if (inst.TargetContainer == currentReturnContainer) {
+				if (currentIsIterator)
 					return new YieldBreakStatement();
 				else if (!inst.Value.MatchNop()) {
-					IType targetType = currentFunction.IsAsync ? currentFunction.AsyncReturnType : currentFunction.ReturnType;
-					var expr = exprBuilder.Translate(inst.Value, typeHint: targetType)
-						.ConvertTo(targetType, exprBuilder, allowImplicitConversion: true);
+					var expr = exprBuilder.Translate(inst.Value, typeHint: currentResultType)
+						.ConvertTo(currentResultType, exprBuilder, allowImplicitConversion: true);
 					return new ReturnStatement(expr);
 				} else
 					return new ReturnStatement();
 			}
-			string label;
-			if (!endContainerLabels.TryGetValue(inst.TargetContainer, out label)) {
+			if (!endContainerLabels.TryGetValue(inst.TargetContainer, out string label)) {
 				label = "end_" + inst.TargetLabel;
 				endContainerLabels.Add(inst.TargetContainer, label);
 			}
@@ -406,19 +410,35 @@ namespace ICSharpCode.Decompiler.CSharp
 
 		protected internal override Statement VisitUsingInstruction(UsingInstruction inst)
 		{
-			var transformed = TransformToForeach(inst, out var resource);
+			var resource = exprBuilder.Translate(inst.ResourceExpression).Expression;
+			var transformed = TransformToForeach(inst, resource);
 			if (transformed != null)
 				return transformed;
 			AstNode usingInit = resource;
 			var var = inst.Variable;
-			if (!inst.ResourceExpression.MatchLdNull() && !NullableType.GetUnderlyingType(var.Type).GetAllBaseTypes().Any(b => b.IsKnownType(KnownTypeCode.IDisposable))) {
+			KnownTypeCode knownTypeCode;
+			IType disposeType;
+			string disposeTypeMethodName;
+			if (inst.IsAsync) {
+				knownTypeCode = KnownTypeCode.IAsyncDisposable;
+				disposeType = exprBuilder.compilation.FindType(KnownTypeCode.IAsyncDisposable);
+				disposeTypeMethodName = "DisposeAsync";
+			} else {
+				knownTypeCode = KnownTypeCode.IDisposable;
+				disposeType = exprBuilder.compilation.FindType(KnownTypeCode.IDisposable);
+				disposeTypeMethodName = "Dispose";
+			}
+			if (!inst.ResourceExpression.MatchLdNull() && !NullableType.GetUnderlyingType(var.Type).GetAllBaseTypes().Any(b => b.IsKnownType(knownTypeCode))) {
 				Debug.Assert(var.Kind == VariableKind.UsingLocal);
 				var.Kind = VariableKind.Local;
-				var disposeType = exprBuilder.compilation.FindType(KnownTypeCode.IDisposable);
 				var disposeVariable = currentFunction.RegisterVariable(
 					VariableKind.Local, disposeType,
 					AssignVariableNames.GenerateVariableName(currentFunction, disposeType)
 				);
+				Expression disposeInvocation = new InvocationExpression(new MemberReferenceExpression(exprBuilder.ConvertVariable(disposeVariable).Expression, disposeTypeMethodName));
+				if (inst.IsAsync) {
+					disposeInvocation = new UnaryOperatorExpression { Expression = disposeInvocation, Operator = UnaryOperatorType.Await };
+				}
 				return new BlockStatement {
 					new ExpressionStatement(new AssignmentExpression(exprBuilder.ConvertVariable(var).Expression, resource.Detach())),
 					new TryCatchStatement {
@@ -427,7 +447,7 @@ namespace ICSharpCode.Decompiler.CSharp
 							new ExpressionStatement(new AssignmentExpression(exprBuilder.ConvertVariable(disposeVariable).Expression, new AsExpression(exprBuilder.ConvertVariable(var).Expression, exprBuilder.ConvertType(disposeType)))),
 							new IfElseStatement {
 								Condition = new BinaryOperatorExpression(exprBuilder.ConvertVariable(disposeVariable), BinaryOperatorType.InEquality, new NullReferenceExpression()),
-								TrueStatement = new ExpressionStatement(new InvocationExpression(new MemberReferenceExpression(exprBuilder.ConvertVariable(disposeVariable).Expression, "Dispose")))
+								TrueStatement = new ExpressionStatement(disposeInvocation)
 							}
 						}
 					},
@@ -441,19 +461,18 @@ namespace ICSharpCode.Decompiler.CSharp
 				}
 				return new UsingStatement {
 					ResourceAcquisition = usingInit,
+					IsAsync = inst.IsAsync,
 					EmbeddedStatement = ConvertAsBlock(inst.Body)
 				};
 			}
 		}
 
-		Statement TransformToForeach(UsingInstruction inst, out Expression resource)
+		Statement TransformToForeach(UsingInstruction inst, Expression resource)
 		{
 			if (!settings.ForEachStatement) {
-				resource = null;
 				return null;
 			}
 			// Check if the using resource matches the GetEnumerator pattern.
-			resource = exprBuilder.Translate(inst.ResourceExpression);
 			var m = getEnumeratorPattern.Match(resource);
 			// The using body must be a BlockContainer.
 			if (!(inst.Body is BlockContainer container) || !m.Success)
@@ -791,7 +810,7 @@ namespace ICSharpCode.Decompiler.CSharp
 		bool ParentIsCurrentGetter(ILInstruction inst)
 		{
 			return inst.Parent is CallInstruction cv && cv.Method.IsAccessor &&
-				cv.Method.AccessorOwner is IProperty p && p.Getter.Equals(cv.Method);
+				cv.Method.AccessorKind == System.Reflection.MethodSemanticsAttributes.Getter;
 		}
 		#endregion
 
@@ -800,8 +819,13 @@ namespace ICSharpCode.Decompiler.CSharp
 			var fixedStmt = new FixedStatement();
 			fixedStmt.Type = exprBuilder.ConvertType(inst.Variable.Type);
 			Expression initExpr;
-			if (inst.Init.OpCode == OpCode.ArrayToPointer) {
-				initExpr = exprBuilder.Translate(((ArrayToPointer)inst.Init).Array);
+			if (inst.Init is GetPinnableReference gpr) {
+				if (gpr.Method != null) {
+					IType expectedType = gpr.Method.IsStatic ? gpr.Method.Parameters[0].Type : gpr.Method.DeclaringType;
+					initExpr = exprBuilder.Translate(gpr.Argument, typeHint: expectedType).ConvertTo(expectedType, exprBuilder);
+				} else {
+					initExpr = exprBuilder.Translate(gpr.Argument);
+				}
 			} else {
 				initExpr = exprBuilder.Translate(inst.Init, typeHint: inst.Variable.Type).ConvertTo(inst.Variable.Type, exprBuilder);
 			}
@@ -968,8 +992,21 @@ namespace ICSharpCode.Decompiler.CSharp
 				stmt.Parameters.AddRange(exprBuilder.MakeParameters(function.Parameters, function));
 				stmt.ReturnType = exprBuilder.ConvertType(function.Method.ReturnType);
 				stmt.Body = nestedBuilder.ConvertAsBlock(function.Body);
+				if (function.Method.TypeParameters.Count > 0) {
+					var astBuilder = exprBuilder.astBuilder;
+					if (astBuilder.ShowTypeParameters) {
+						int skipCount = function.ReducedMethod.NumberOfCompilerGeneratedTypeParameters;
+						stmt.TypeParameters.AddRange(function.Method.TypeParameters.Skip(skipCount).Select(t => astBuilder.ConvertTypeParameter(t)));
+						if (astBuilder.ShowTypeParameterConstraints) {
+							stmt.Constraints.AddRange(function.Method.TypeParameters.Skip(skipCount).Select(t => astBuilder.ConvertTypeParameterConstraint(t)).Where(c => c != null));
+						}
+					}
+				}
 				if (function.IsAsync) {
 					stmt.Modifiers |= Modifiers.Async;
+				}
+				if (settings.StaticLocalFunctions && function.ReducedMethod.IsStaticLocalFunction) {
+					stmt.Modifiers |= Modifiers.Static;
 				}
 				stmt.AddAnnotation(new MemberResolveResult(null, function.ReducedMethod));
 				return stmt;

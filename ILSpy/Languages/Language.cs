@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text;
+using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.Decompiler;
 using ICSharpCode.Decompiler.Metadata;
 using ICSharpCode.Decompiler.Solution;
@@ -32,7 +33,7 @@ using SRM = System.Reflection.Metadata;
 
 namespace ICSharpCode.ILSpy
 {
-	public struct LanguageVersion : IEquatable<LanguageVersion>
+	public class LanguageVersion
 	{
 		public string Version { get; }
 		public string DisplayName { get; }
@@ -43,23 +44,10 @@ namespace ICSharpCode.ILSpy
 			this.DisplayName = name ?? version.ToString();
 		}
 
-		public bool Equals(LanguageVersion other)
+		public override string ToString()
 		{
-			return other.Version == this.Version && other.DisplayName == this.DisplayName;
+			return $"[LanguageVersion DisplayName={DisplayName}, Version={Version}]";
 		}
-
-		public override bool Equals(object obj)
-		{
-			return obj is LanguageVersion version && Equals(version);
-		}
-
-		public override int GetHashCode()
-		{
-			return unchecked(982451629 * Version.GetHashCode() + 982451653 * DisplayName.GetHashCode());
-		}
-
-		public static bool operator ==(LanguageVersion lhs, LanguageVersion rhs) => lhs.Equals(rhs);
-		public static bool operator !=(LanguageVersion lhs, LanguageVersion rhs) => !lhs.Equals(rhs);
 	}
 
 	/// <summary>
@@ -347,6 +335,15 @@ namespace ICSharpCode.ILSpy
 		public virtual string GetTooltip(IEntity entity)
 		{
 			return GetDisplayName(entity, true, true, true);
+		}
+
+		/// <summary>
+		/// Converts a member signature to a string.
+		/// This is used for displaying the tooltip on a member reference.
+		/// </summary>
+		public virtual RichText GetRichTextTooltip(IEntity entity)
+		{
+			return GetTooltip(entity);
 		}
 
 		public virtual string FieldToString(IField field, bool includeDeclaringTypeName, bool includeNamespace, bool includeNamespaceOfDeclaringTypeName)

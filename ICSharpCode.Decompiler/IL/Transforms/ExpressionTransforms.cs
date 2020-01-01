@@ -177,6 +177,17 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 				context.Step("conv.i4(ldlen array) => ldlen.i4(array)", inst);
 				inst.AddILRange(inst.Argument);
 				inst.ReplaceWith(new LdLen(inst.TargetType.GetStackType(), array).WithILRange(inst));
+				return;
+			}
+			if (inst.TargetType.IsFloatType() && inst.Argument is Conv conv 
+				&& conv.Kind == ConversionKind.IntToFloat && conv.TargetType == PrimitiveType.R)
+			{
+				// IL conv.r.un does not indicate whether to convert the target type to R4 or R8,
+				// so the C# compiler usually follows it with an explicit conv.r4 or conv.r8.
+				// To avoid emitting '(float)(double)val', we combine these two conversions:
+				context.Step("conv.rN(conv.r.un(...)) => conv.rN.un(...)", inst);
+				inst.ReplaceWith(new Conv(conv.Argument, conv.InputType, conv.InputSign, inst.TargetType, inst.CheckForOverflow, inst.IsLifted | conv.IsLifted));
+				return;
 			}
 		}
 
@@ -394,7 +405,7 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 		{
 			var pointerType = new PointerType(elementType);
 			var elementCountInstr = PointerArithmeticOffset.Detect(sizeInBytesInstr, pointerType.ElementType, checkForOverflow: true, unwrapZeroExtension: true);
-			if (!elementCountInstr.Match(elementCountInstr2).Success)
+			if (elementCountInstr == null || !elementCountInstr.Match(elementCountInstr2).Success)
 				return false;
 			return true;
 		}
@@ -668,11 +679,6 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 					{
 						if (new NullableLiftingTransform(context).Run(inst)) {
 							// e.g. "(a.GetValueOrDefault() == b.GetValueOrDefault()) & (a.HasValue & b.HasValue)"
-						} else if (SemanticHelper.IsPure(inst.Right.Flags)) {
-							context.Step("Replace bit.and with logic.and", inst);
-							var expr = IfInstruction.LogicAnd(inst.Left, inst.Right);
-							inst.ReplaceWith(expr);
-							expr.AcceptVisitor(this);
 						}
 					}
 					break;

@@ -180,16 +180,23 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 				if (!IsValidInStatementExpression(stmt.Expression)) {
 					// fetch ILFunction
 					var function = stmt.Ancestors.SelectMany(a => a.Annotations.OfType<ILFunction>()).First(f => f.Parent == null);
-					// assign result to dummy variable
-					var type = stmt.Expression.GetResolveResult().Type;
-					var v = function.RegisterVariable(
-						VariableKind.StackSlot,
-						type,
-						AssignVariableNames.GenerateVariableName(function, type, stmt.Expression.Annotations.OfType<ILInstruction>().Where(AssignVariableNames.IsSupportedInstruction).FirstOrDefault())
-					);
-					stmt.Expression = new AssignmentExpression(
-						new IdentifierExpression(v.Name).WithRR(new ILVariableResolveResult(v, v.Type)),
-						stmt.Expression.Detach());
+					// if possible use C# 7.0 discard-assignment
+					if (context.Settings.Discards && !ExpressionBuilder.HidesVariableWithName(function, "_")) {
+						stmt.Expression = new AssignmentExpression(
+							new IdentifierExpression("_"), // no ResolveResult
+							stmt.Expression.Detach());
+					} else {
+						// assign result to dummy variable
+						var type = stmt.Expression.GetResolveResult().Type;
+						var v = function.RegisterVariable(
+							VariableKind.StackSlot,
+							type,
+							AssignVariableNames.GenerateVariableName(function, type, stmt.Expression.Annotations.OfType<ILInstruction>().Where(AssignVariableNames.IsSupportedInstruction).FirstOrDefault())
+						);
+						stmt.Expression = new AssignmentExpression(
+							new IdentifierExpression(v.Name).WithRR(new ILVariableResolveResult(v, v.Type)),
+							stmt.Expression.Detach());
+					}
 				}
 			}
 		}
@@ -425,6 +432,17 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 				&& identExpr.TypeArguments.Count == 0;
 		}
 
+		bool CombineDeclarationAndInitializer(VariableToDeclare v, TransformContext context)
+		{
+			if (v.Type.IsByRefLike)
+				return true; // by-ref-like variables always must be initialized at their declaration.
+
+			if (v.InsertionPoint.nextNode.Role == ForStatement.InitializerRole)
+				return true; // for-statement initializers always should combine declaration and initialization.
+
+			return !context.Settings.SeparateLocalVariableDeclarations;
+		}
+
 		void InsertVariableDeclarations(TransformContext context)
 		{
 			var replacements = new List<(AstNode, AstNode)>();
@@ -432,13 +450,16 @@ namespace ICSharpCode.Decompiler.CSharp.Transforms
 				if (v.RemovedDueToCollision)
 					continue;
 
-				if (IsMatchingAssignment(v, out AssignmentExpression assignment)) {
+				if (CombineDeclarationAndInitializer(v, context) && IsMatchingAssignment(v, out AssignmentExpression assignment)) {
 					// 'int v; v = expr;' can be combined to 'int v = expr;'
 					AstType type;
 					if (context.Settings.AnonymousTypes && v.Type.ContainsAnonymousType()) {
 						type = new SimpleType("var");
 					} else {
 						type = context.TypeSystemAstBuilder.ConvertType(v.Type);
+					}
+					if (v.ILVariable.IsRefReadOnly && type is ComposedType composedType && composedType.HasRefSpecifier) {
+						composedType.HasReadOnlySpecifier = true;
 					}
 					var vds = new VariableDeclarationStatement(type, v.Name, assignment.Right.Detach());
 					var init = vds.Variables.Single();

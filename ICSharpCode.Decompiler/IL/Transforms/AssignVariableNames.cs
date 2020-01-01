@@ -140,7 +140,7 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 			// remove unused variables before assigning names
 			function.Variables.RemoveDead();
 			int numDisplayClassLocals = 0;
-			foreach (var v in function.Variables) {
+			foreach (var v in function.Variables.OrderBy(v => v.Name)) {
 				switch (v.Kind) {
 					case VariableKind.Parameter: // ignore
 						break;
@@ -243,8 +243,12 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 				reservedVariableNames.Add(nameWithoutDigits, number - 1);
 			}
 			int count = ++reservedVariableNames[nameWithoutDigits];
+			string nameWithDigits = nameWithoutDigits + count.ToString();
+			if (oldVariableName == nameWithDigits) {
+				return oldVariableName;
+			}
 			if (count != 1) {
-				return nameWithoutDigits + count.ToString();
+				return nameWithDigits;
 			} else {
 				return nameWithoutDigits;
 			}
@@ -493,7 +497,7 @@ namespace ICSharpCode.Decompiler.IL.Transforms
 						AddExistingName(reservedVariableNames, v.Name);
 				}
 			}
-			foreach (var f in rootFunction.Method.DeclaringTypeDefinition.Fields.Select(f => f.Name))
+			foreach (var f in rootFunction.Method.DeclaringTypeDefinition.GetFields().Select(f => f.Name))
 				AddExistingName(reservedVariableNames, f);
 			return reservedVariableNames;
 		}

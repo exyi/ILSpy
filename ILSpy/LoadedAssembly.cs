@@ -28,10 +28,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using ICSharpCode.Decompiler.DebugInfo;
 using ICSharpCode.Decompiler.Metadata;
-using ICSharpCode.Decompiler.PdbProvider.Cecil;
+using ICSharpCode.Decompiler.PdbProvider;
 using ICSharpCode.Decompiler.TypeSystem;
 using ICSharpCode.Decompiler.TypeSystem.Implementation;
-using ICSharpCode.ILSpy.DebugInfo;
 using ICSharpCode.ILSpy.Options;
 
 namespace ICSharpCode.ILSpy
@@ -56,6 +55,7 @@ namespace ICSharpCode.ILSpy
 
 			this.assemblyTask = Task.Factory.StartNew(LoadAssembly, stream); // requires that this.fileName is set
 			this.shortName = Path.GetFileNameWithoutExtension(fileName);
+			this.resolver = new MyAssemblyResolver(this);
 		}
 
 		/// <summary>
@@ -73,7 +73,7 @@ namespace ICSharpCode.ILSpy
 		IDebugInfoProvider debugInfoProvider;
 
 		/// <summary>
-		/// Gets the Cecil ModuleDefinition.
+		/// Gets the <see cref="PEFile"/>.
 		/// </summary>
 		public Task<PEFile> GetPEFileAsync()
 		{
@@ -81,13 +81,13 @@ namespace ICSharpCode.ILSpy
 		}
 
 		/// <summary>
-		/// Gets the Cecil ModuleDefinition.
+		/// Gets the <see cref="PEFile"/>.
 		/// Returns null in case of load errors.
 		/// </summary>
 		public PEFile GetPEFileOrNull()
 		{
 			try {
-				return GetPEFileAsync().Result;
+				return GetPEFileAsync().GetAwaiter().GetResult();
 			} catch (Exception ex) {
 				System.Diagnostics.Trace.TraceError(ex.ToString());
 				return null;
@@ -156,7 +156,8 @@ namespace ICSharpCode.ILSpy
 			// runs on background thread
 			if (state is Stream stream) {
 				// Read the module from a precrafted stream
-				module = new PEFile(fileName, stream, metadataOptions: options);
+				var streamOptions = stream is MemoryStream ? PEStreamOptions.PrefetchEntireImage : PEStreamOptions.Default;
+				module = new PEFile(fileName, stream, streamOptions, metadataOptions: options);
 			} else {
 				// Read the module from disk (by default)
 				stream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
@@ -166,7 +167,7 @@ namespace ICSharpCode.ILSpy
 
 			if (DecompilerSettingsPanel.CurrentDecompilerSettings.UseDebugSymbols) {
 				try {
-					LoadSymbols(module);
+					debugInfoProvider = DebugInfoUtils.LoadSymbols(module);
 				} catch (IOException) {
 				} catch (UnauthorizedAccessException) {
 				} catch (InvalidOperationException) {
@@ -177,70 +178,6 @@ namespace ICSharpCode.ILSpy
 				loadedAssemblies.Add(module, this);
 			}
 			return module;
-		}
-
-		void LoadSymbols(PEFile module)
-		{
-			try {
-				var reader = module.Reader;
-				// try to open portable pdb file/embedded pdb info:
-				if (TryOpenPortablePdb(module, out var provider, out var pdbFileName)) {
-					debugInfoProvider = new PortableDebugInfoProvider(pdbFileName, provider);
-				} else {
-					// search for pdb in same directory as dll
-					string pdbDirectory = Path.GetDirectoryName(fileName);
-					pdbFileName = Path.Combine(pdbDirectory, Path.GetFileNameWithoutExtension(fileName) + ".pdb");
-					if (File.Exists(pdbFileName)) {
-						debugInfoProvider = new MonoCecilDebugInfoProvider(module, pdbFileName);
-						return;
-					}
-
-					// TODO: use symbol cache, get symbols from microsoft
-				}
-			} catch (Exception ex) when (ex is BadImageFormatException || ex is COMException) {
-				// Ignore PDB load errors
-			}
-		}
-
-		const string LegacyPDBPrefix = "Microsoft C/C++ MSF 7.00";
-		byte[] buffer = new byte[LegacyPDBPrefix.Length];
-
-		bool TryOpenPortablePdb(PEFile module, out MetadataReaderProvider provider, out string pdbFileName)
-		{
-			provider = null;
-			pdbFileName = null;
-			var reader = module.Reader;
-			foreach (var entry in reader.ReadDebugDirectory()) {
-				if (entry.IsPortableCodeView) {
-					return reader.TryOpenAssociatedPortablePdb(fileName, OpenStream, out provider, out pdbFileName);
-				}
-				if (entry.Type == DebugDirectoryEntryType.CodeView) {
-					string pdbDirectory = Path.GetDirectoryName(fileName);
-					pdbFileName = Path.Combine(pdbDirectory, Path.GetFileNameWithoutExtension(fileName) + ".pdb");
-					if (File.Exists(pdbFileName)) {
-						Stream stream = OpenStream(pdbFileName);
-						if (stream.Read(buffer, 0, buffer.Length) == LegacyPDBPrefix.Length
-							&& System.Text.Encoding.ASCII.GetString(buffer) == LegacyPDBPrefix) {
-							return false;
-						}
-						stream.Position = 0;
-						provider = MetadataReaderProvider.FromPortablePdbStream(stream);
-						return true;
-					}
-				}
-			}
-			return false;
-		}
-
-		Stream OpenStream(string fileName)
-		{
-			if (!File.Exists(fileName))
-				return null;
-			var memory = new MemoryStream();
-			using (var stream = File.OpenRead(fileName))
-				stream.CopyTo(memory);
-			memory.Position = 0;
-			return memory;
 		}
 
 		[ThreadStatic]
@@ -287,9 +224,11 @@ namespace ICSharpCode.ILSpy
 			}
 		}
 
+		readonly MyAssemblyResolver resolver;
+
 		public IAssemblyResolver GetAssemblyResolver()
 		{
-			return new MyAssemblyResolver(this);
+			return resolver;
 		}
 
 		/// <summary>
@@ -330,7 +269,8 @@ namespace ICSharpCode.ILSpy
 			}
 		}
 
-		static Dictionary<string, LoadedAssembly> loadingAssemblies = new Dictionary<string, LoadedAssembly>();
+		static readonly Dictionary<string, LoadedAssembly> loadingAssemblies = new Dictionary<string, LoadedAssembly>();
+		MyUniversalResolver universalResolver;
 
 		LoadedAssembly LookupReferencedAssemblyInternal(Decompiler.Metadata.IAssemblyReference fullName, bool isWinRT)
 		{
@@ -350,8 +290,11 @@ namespace ICSharpCode.ILSpy
 					}
 				}
 
-				var resolver = new MyUniversalResolver(this);
-				file = resolver.FindAssemblyFile(fullName);
+				if (universalResolver == null) {
+					universalResolver = new MyUniversalResolver(this);
+				}
+
+				file = universalResolver.FindAssemblyFile(fullName);
 
 				foreach (LoadedAssembly loaded in assemblyList.GetAssemblies()) {
 					if (loaded.FileName.Equals(file, StringComparison.OrdinalIgnoreCase)) {

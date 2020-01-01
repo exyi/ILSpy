@@ -19,6 +19,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using ICSharpCode.Decompiler.TypeSystem.Implementation;
 
 namespace ICSharpCode.Decompiler.TypeSystem
 {
@@ -189,7 +190,21 @@ namespace ICSharpCode.Decompiler.TypeSystem
 				return base.VisitTypeParameter(type);
 			}
 		}
-		
+
+		public override IType VisitNullabilityAnnotatedType(NullabilityAnnotatedType type)
+		{
+			if (type is NullabilityAnnotatedTypeParameter tp) {
+				if (tp.Nullability == Nullability.Nullable) {
+					return VisitTypeParameter(tp).ChangeNullability(Nullability.Nullable);
+				} else {
+					// T! substituted with T=oblivious string should result in oblivious string
+					return VisitTypeParameter(tp);
+				}
+			} else {
+				return base.VisitNullabilityAnnotatedType(type);
+			}
+		}
+
 		public override string ToString()
 		{
 			StringBuilder b = new StringBuilder();
