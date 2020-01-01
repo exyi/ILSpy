@@ -25,7 +25,7 @@ namespace ICSharpCode.Decompiler.TypeSystem.Implementation
 	/// </summary>
 	public class SpecializedField : SpecializedMember, IField
 	{
-		internal static IField Create(IField fieldDefinition, TypeParameterSubstitution substitution)
+		public static IField Create(IField fieldDefinition, TypeParameterSubstitution substitution)
 		{
 			if (TypeParameterSubstitution.Identity.Equals(substitution) || fieldDefinition.DeclaringType.TypeParameterCount == 0) {
 				return fieldDefinition;

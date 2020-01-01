@@ -32,7 +32,7 @@ namespace ICSharpCode.Decompiler.TypeSystem.Implementation
 	/// Ensure that your IType implementation does not use the GetMembersHelper if both flags are set,
 	/// otherwise you'll get a StackOverflowException!
 	/// </summary>
-	static class GetMembersHelper
+	public static class GetMembersHelper
 	{
 		#region GetNestedTypes
 		public static IEnumerable<IType> GetNestedTypes(IType type, Predicate<ITypeDefinition> filter, GetMemberOptions options)

@@ -25,7 +25,7 @@ namespace ICSharpCode.Decompiler.TypeSystem.Implementation
 	/// </summary>
 	public class SpecializedProperty : SpecializedParameterizedMember, IProperty
 	{
-		internal static IProperty Create(IProperty propertyDefinition, TypeParameterSubstitution substitution)
+		public static IProperty Create(IProperty propertyDefinition, TypeParameterSubstitution substitution)
 		{
 			if (TypeParameterSubstitution.Identity.Equals(substitution) || propertyDefinition.DeclaringType.TypeParameterCount == 0) {
 				return propertyDefinition;
