@@ -21,7 +21,7 @@ using ICSharpCode.Decompiler.Util;
 
 namespace ICSharpCode.Decompiler.IL
 {
-	static class SemanticHelper
+	public static class SemanticHelper
 	{
 		internal static InstructionFlags CombineBranches(InstructionFlags trueFlags, InstructionFlags falseFlags)
 		{
@@ -36,7 +36,7 @@ namespace ICSharpCode.Decompiler.IL
 		/// * must not throw exceptions
 		/// * must not branch
 		/// </summary>
-		internal static bool IsPure(InstructionFlags inst)
+		public static bool IsPure(InstructionFlags inst)
 		{
 			// ControlFlow is fine: internal control flow is pure as long as it's not an infinite loop,
 			// and infinite loops are impossible without MayBranch.
